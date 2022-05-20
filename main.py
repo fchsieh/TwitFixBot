@@ -1,7 +1,9 @@
+import json
+import logging
 import os
 import re
-import json
 from datetime import datetime
+from logging.handlers import RotatingFileHandler
 
 import discord
 import requests
@@ -14,6 +16,7 @@ re_status = re.compile("\\w{1,15}\\/(status|statuses)\\/\\d{2,20}")
 WEBHOOK_NAME = ""
 AVATAR_IMG = "./avatar.jpeg"
 BOT_AVATAR = None
+LOG_NAME = "twitfix.log"
 # Set twitter api
 TwitterAPI = None
 
@@ -163,7 +166,7 @@ class DiscordMessage:
 
 class MyClient(discord.Client):
     async def on_ready(self):
-        print("[INIT] Logged on as {0}!".format(self.user))
+        logging.info("Logged on as {0}!".format(self.user))
 
     async def get_webhook(self, message):
         ch_webhooks = await message.channel.webhooks()
@@ -197,27 +200,32 @@ class MyClient(discord.Client):
             # this is a spoiler message, skip
             return
 
+        embeds_list = []
+        if message.embeds:
+            for embed in message.embeds:
+                embeds_list.append(embed.url)  # urls that have embed, should be skipped
+
         for msg in message_list:
             is_tweet = self.is_valid_twitter_url(msg)
             if is_tweet is not None:
                 twitter_url = is_tweet
-                print("> Tweet Found: {}".format(twitter_url))
+                logging.info("Tweet Found: {}".format(twitter_url))
                 # Try to fetch tweet object
                 tweet = Tweet(twitter_url)
                 if tweet is not None:  # A valid message found!
                     if tweet.type == "Image":
-                        if not tweet.is_hidden():
-                            print(">> This is not a hidden tweet")
+                        if not tweet.is_hidden() or tweet.url in embeds_list:
+                            logging.info("This is not a hidden tweet... Skipped")
                             # no need to post this image
                             continue
-                        print(">> Hidden image found... Start processing")
+                        logging.info("Hidden image found... Start processing")
                         tweet.download_image()
                     elif tweet.type == "Video":
                         continue  # not implemented yet
                     elif tweet.type == "Text":
                         continue  # not implemented yet
                     else:
-                        print("[ERR] Error, not a valid tweet?")
+                        logging.warning("Failed to process, not a valid tweet?")
                         continue  # not implemented yet
 
                     # Build tweet info (author, date, url...)
@@ -232,10 +240,12 @@ class MyClient(discord.Client):
                         webhook,
                         json=main_content,
                     )
-                    if post_res.status_code == 400:
-                        print("[ERR] Failed to post to the webhook")
+                    if post_res.status_code >= 400:  # Client or Server Error
+                        logging.warning("Failed to post to the webhook url")
+                    else:
+                        logging.info("Successfully posted to the webhook url")
                 else:
-                    print("[ERR] Failed to fetch this tweet!")
+                    logging.warning("Failed to process this tweet")
                     continue
 
     def is_valid_twitter_url(self, url):
@@ -256,6 +266,18 @@ class MyClient(discord.Client):
 
 
 if __name__ == "__main__":
+    log_format = "%(asctime)s [%(levelname)s]: %(message)s"
+    logging.basicConfig(
+        format=log_format,
+        datefmt="%m/%d/%Y %I:%M:%S %p",
+        level=logging.INFO,
+        handlers=[
+            logging.StreamHandler(),
+            logging.FileHandler(LOG_NAME, mode="w"),
+            RotatingFileHandler(LOG_NAME, maxBytes=5 * 1024, backupCount=2),
+        ],
+    )
+
     load_dotenv()
     # Set global variables and bot configuration
     WEBHOOK_NAME = os.environ.get("WEBHOOK_NAME")
