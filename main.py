@@ -304,16 +304,16 @@ class DiscordClient(discord.Client):
                         logging.info("Successfully sent message to channel")
 
                     # Check if this message has embed again (if true, delete the sent webhook)
-                    await asyncio.sleep(2)
-
-                    if message.embeds and tweet.type == "Image":
-                        embed_url_list = [embed.url for embed in message.embeds]
-                        if tweet.url in embed_url_list:
-                            # delete latest image from bot
-                            logging.info(
-                                "Deleting sent webhook, previous message has embed (should not be sent)"
-                            )
-                            webhook.delete(sent_webhook)
+                    if tweet.type == "Image":
+                        await asyncio.sleep(2)
+                        if message.embeds:
+                            embed_url_list = [embed.url for embed in message.embeds]
+                            if tweet.url in embed_url_list:
+                                # delete latest image from bot
+                                logging.info(
+                                    "Deleting sent webhook, previous message has embed (should not be sent)"
+                                )
+                                webhook.delete(sent_webhook)
 
                 else:
                     # Not a valid tweet
