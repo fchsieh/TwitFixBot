@@ -1,5 +1,5 @@
 discord.py==1.7.3
 discord_webhook==0.16.3
 python-dotenv==0.20.0
-python_twitter==3.5
+twitter==1.19.3
 requests==2.27.1
