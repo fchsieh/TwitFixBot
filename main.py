@@ -169,7 +169,7 @@ class MyClient(discord.Client):
                 name="rinchan", avatar=fp.read()
             )
         else:
-            webhook = discord.utils.get(ch_webhooks, name="twitter-fix")
+            webhook = discord.utils.get(ch_webhooks, name="rinchan")
             if webhook is None:
                 # need to create a new webhook for this app
                 fp = open("./avatar.jpeg", "rb")
