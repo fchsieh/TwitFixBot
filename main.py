@@ -1,3 +1,4 @@
+import asyncio
 import logging
 import os
 import re
@@ -247,7 +248,7 @@ class MyClient(discord.Client):
                         logging.info("Successfully sent message to channel")
 
                     # Check if this message has embed again (if true, delete the sent webhook)
-                    time.sleep(5)
+                    await asyncio.sleep(10)
 
                     if message.embeds:
                         embed_url_list = [embed.url for embed in message.embeds]
