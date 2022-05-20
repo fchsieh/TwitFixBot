@@ -8,6 +8,7 @@ from logging.handlers import RotatingFileHandler
 import discord
 import requests
 import twitter
+from discord_webhook import DiscordWebhook, DiscordEmbed
 from dotenv import load_dotenv
 
 re_status = re.compile("\\w{1,15}\\/(status|statuses)\\/\\d{2,20}")
@@ -89,7 +90,7 @@ class Tweet:
         created_at = datetime.strptime(
             self.tweet["created_at"], "%a %b %d %H:%M:%S +0000 %Y"
         )
-        self.content["Timestamp"] = created_at.isoformat()
+        self.content["Timestamp"] = created_at.timestamp()
 
     def download_image(self):
         if self.type != "Image" or self.tweet is None:
@@ -120,53 +121,42 @@ class Tweet:
 class DiscordMessage:
     def __init__(self, content=None):
         self.content = content
-        self.main_content = None
+        self.embed_list = []
         self.build_message()
 
     def build_message(self):
         type = self.content["Type"]
-        message_content = {
-            "embeds": [],
-        }
 
         if type == "Image":
             image_count = self.content["Images"][-1]
             image_list = self.content["Images"][:image_count]
 
             for image in range(image_count):
-                image_content = {"type": "rich", "url": self.content["Tweet_url"]}
+                embed = DiscordEmbed(url=self.content["Tweet_url"])
                 if image == 0:
-                    # set tweet info
-                    image_content["author"] = {
-                        "name": self.content["Author"],
-                        "url": self.content["Author_url"],
-                        "icon_url": self.content["Author_icon_img"],
-                    }
-                    image_content["fields"] = [
-                        {
-                            "name": "Likes",
-                            "value": self.content["Likes"],
-                            "inline": "true",
-                        },
-                        {
-                            "name": "Retweets",
-                            "value": self.content["Retweets"],
-                            "inline": "true",
-                        },
-                    ]
-                    image_content["color"] = 1942002
-                    image_content["description"] = self.content["Description"]
-                    image_content["footer"] = {
-                        "text": "Twitter",
-                        "proxy_icon_url": "https://images-ext-1.discordapp.net/external/bXJWV2Y_F3XSra_kEqIYXAAsI3m1meckfLhYuWzxIfI/https/abs.twimg.com/icons/apple-touch-icon-192x192.png",
-                        "icon_url": "https://abs.twimg.com/icons/apple-touch-icon-192x192.png",
-                    }
-                    image_content["timestamp"] = self.content["Timestamp"]
+                    # set basic tweet info
+                    embed.set_color(1942002)
+                    embed.set_description(self.content["Description"])
+                    embed.set_author(
+                        name=self.content["Author"],
+                        url=self.content["Author_url"],
+                        icon_url=self.content["Author_icon_img"],
+                    )
+                    embed.add_embed_field(
+                        name="Likes", value=self.content["Likes"], inline=True
+                    )
+                    embed.add_embed_field(
+                        name="Retweets", value=self.content["Retweets"], inline=True
+                    )
+                    embed.set_footer(
+                        text="Twitter",
+                        proxy_icon_url="https://images-ext-1.discordapp.net/external/bXJWV2Y_F3XSra_kEqIYXAAsI3m1meckfLhYuWzxIfI/https/abs.twimg.com/icons/apple-touch-icon-192x192.png",
+                        icon_url="https://abs.twimg.com/icons/apple-touch-icon-192x192.png",
+                    )
+                    embed.set_timestamp(timestamp=self.content["Timestamp"])
 
-                image_content["image"] = {"url": image_list[image]}
-                message_content["embeds"].append(image_content)
-
-        self.main_content = json.loads(json.dumps(message_content))
+                embed.set_image(url=image_list[image])
+                self.embed_list.append(embed)
 
 
 class MyClient(discord.Client):
@@ -174,26 +164,29 @@ class MyClient(discord.Client):
         logging.info("Logged on as {0}!".format(self.user))
 
     async def get_webhook(self, message):
-        ch_webhooks = await message.channel.webhooks()
-        webhook = None
-        if len(ch_webhooks) == 0:
+        channel_all_webhooks = await message.channel.webhooks()
+        send_webhook = None  # this is used for getting webhook url (for later usage)
+        if len(channel_all_webhooks) == 0:
             # create webhook for twitter-fix bot
-            webhook = await message.channel.create_webhook(
+            send_webhook = await message.channel.create_webhook(
                 name=WEBHOOK_NAME, avatar=BOT_AVATAR
             )
         else:
-            webhook = discord.utils.get(ch_webhooks, name=WEBHOOK_NAME)
-            if webhook is None:
+            send_webhook = discord.utils.get(channel_all_webhooks, name=WEBHOOK_NAME)
+            if send_webhook is None:
                 # need to create a new webhook for this app
-                webhook = await message.channel.create_webhook(
+                send_webhook = await message.channel.create_webhook(
                     name=WEBHOOK_NAME, avatar=BOT_AVATAR
                 )
 
-        webhook_url = webhook.url
-        if webhook_url is None:
-            raise Exception("Failed to fetch webhook")
+        webhook_url = send_webhook.url
+        if send_webhook is None or webhook_url is None:
+            logging.error("Failed to fetch webhook")
+            return
 
-        return webhook_url
+        webhook = DiscordWebhook(url=webhook_url, rate_limit_retry=True)
+
+        return webhook
 
     async def on_message(self, message):
         # check if user sends a twitter url
@@ -239,16 +232,25 @@ class MyClient(discord.Client):
                     webhook = await self.get_webhook(message)
 
                     tweet_output = tweet.output()
-                    main_content = DiscordMessage(tweet_output).main_content
+                    embed_list = DiscordMessage(tweet_output).embed_list
+
+                    # add content to webhook message
+                    for embed in embed_list:
+                        webhook.add_embed(embed)
+
                     # send message to this channel!
-                    post_res = requests.post(
-                        webhook,
-                        json=main_content,
-                    )
-                    if post_res.status_code >= 400:  # Client or Server Error
-                        logging.warning("Failed to post to the webhook url")
-                    else:
-                        logging.info("Successfully posted to the webhook url")
+                    sent_webhook = webhook.execute()
+
+                    # Check if this message has embed again (if true, delete the sent webhook)
+                    if message.embeds:
+                        embed_url_list = [embed.url for embed in message.embeds]
+                        if tweet.url in embed_url_list:
+                            # delete latest image from bot
+                            logging.info(
+                                "Deleting sent webhook, previous message has embed"
+                            )
+                            webhook.delete(sent_webhook)
+
                 else:
                     logging.warning("Failed to process this tweet")
                     continue
@@ -286,6 +288,7 @@ if __name__ == "__main__":
     load_dotenv()
     # Set global variables and bot configuration
     WEBHOOK_NAME = os.environ.get("WEBHOOK_NAME")
+
     fp = open(AVATAR_IMG, "rb")
     BOT_AVATAR = fp.read()
 
