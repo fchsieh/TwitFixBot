@@ -10,7 +10,9 @@ from dotenv import load_dotenv
 
 re_status = re.compile("\\w{1,15}\\/(status|statuses)\\/\\d{2,20}")
 
-# set twitter api
+# Set webhook name
+webhook_name = "aqubot"
+# Set twitter api
 TwitterAPI = None
 
 
@@ -166,15 +168,15 @@ class MyClient(discord.Client):
             # create webhook for twitter-fix bot
             fp = open("./avatar.jpeg", "rb")
             webhook = await message.channel.create_webhook(
-                name="rinchan", avatar=fp.read()
+                name=webhook_name, avatar=fp.read()
             )
         else:
-            webhook = discord.utils.get(ch_webhooks, name="rinchan")
+            webhook = discord.utils.get(ch_webhooks, name=webhook_name)
             if webhook is None:
                 # need to create a new webhook for this app
                 fp = open("./avatar.jpeg", "rb")
                 webhook = await message.channel.create_webhook(
-                    name="rinchan", avatar=fp.read()
+                    name=webhook_name, avatar=fp.read()
                 )
 
         webhook_url = webhook.url
