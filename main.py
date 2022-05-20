@@ -8,6 +8,7 @@ from logging.handlers import RotatingFileHandler
 import discord
 import requests
 import twitter
+import youtube_dl
 from discord_webhook import DiscordEmbed, DiscordWebhook
 from dotenv import load_dotenv
 
@@ -91,6 +92,8 @@ class Tweet:
             self.tweet["created_at"], "%a %b %d %H:%M:%S +0000 %Y"
         )
         self.content["Timestamp"] = created_at.timestamp()
+        self.content["Type"] = self.type
+        self.content["Tweet_url"] = self.url
 
     def download_image(self):
         if self.type != "Image" or self.tweet is None:
@@ -99,21 +102,39 @@ class Tweet:
         i = 0
         for media in self.tweet["extended_entities"]["media"]:
             imgs[i] = media["media_url_https"]
-            i = i + 1
+            i += 1
 
         imgs[4] = i
         images = imgs
-        thumb = self.tweet["extended_entities"]["media"][0]["media_url_https"]
         self.content["Images"] = images
-        self.content["Thumb"] = thumb
-        self.content["Tweet_url"] = self.url
-        self.content["Type"] = self.type
 
-    def download_video(self):
-        if self.type != "Video":
+    def download_video(self, method="youtube-dl"):
+        if self.type != "Video" or self.tweet is None:
             return
-        logging.debug("Video download is not implemented yet!")
-        return
+        vid_url = None
+
+        if method == "youtube-dl":
+            # use youtube_dl method
+            with youtube_dl.YoutubeDL({"outtmpl": "%(id)s.%(ext)s"}) as ydl:
+                result = ydl.extract_info(self.url, download=False)
+                self.content["Video_url"] = result["url"]
+                self.content["Thumbnail"] = result["thumbnail"]
+
+        elif method == "api":
+            if self.tweet["extended_entities"]["media"][0]["video_info"]["variants"]:
+                best_bitrate = 0
+                thumb = self.tweet["extended_entities"]["media"][0]["media_url"]
+                for video in self.tweet["extended_entities"]["media"][0]["video_info"][
+                    "variants"
+                ]:
+                    if (
+                        video["content_type"] == "video/mp4"
+                        and video["bitrate"] > best_bitrate
+                    ):
+                        vid_url = video["url"]
+                        best_bitrate = video["bitrate"]
+                self.content["Video_url"] = vid_url
+                self.content["Thumbnail"] = thumb
 
     def output(self):
         return self.content
@@ -123,7 +144,37 @@ class DiscordMessage:
     def __init__(self, content=None):
         self.content = content
         self.embed_list = []
+        self.video = {
+            "url": None,
+            "thumbnail": None,
+        }
+        self.discord_colors = {"Twitter": 1942002}
         self.build_message()
+
+    def twitter_embed_block(self, isBase=False):
+        embed = DiscordEmbed(url=self.content["Tweet_url"])
+        if isBase:
+            # set basic tweet info
+            embed.set_color(self.discord_colors["Twitter"])
+            embed.set_description(self.content["Description"])
+            embed.set_author(
+                name=self.content["Author"],
+                url=self.content["Author_url"],
+                icon_url=self.content["Author_icon_img"],
+            )
+            embed.add_embed_field(
+                name="Likes", value=self.content["Likes"], inline=True
+            )
+            embed.add_embed_field(
+                name="Retweets", value=self.content["Retweets"], inline=True
+            )
+            embed.set_footer(
+                text="Twitter",
+                proxy_icon_url="https://images-ext-1.discordapp.net/external/bXJWV2Y_F3XSra_kEqIYXAAsI3m1meckfLhYuWzxIfI/https/abs.twimg.com/icons/apple-touch-icon-192x192.png",
+                icon_url="https://abs.twimg.com/icons/apple-touch-icon-192x192.png",
+            )
+            embed.set_timestamp(timestamp=self.content["Timestamp"])
+        return embed
 
     def build_message(self):
         type = self.content["Type"]
@@ -133,31 +184,21 @@ class DiscordMessage:
             image_list = self.content["Images"][:image_count]
 
             for image in range(image_count):
-                embed = DiscordEmbed(url=self.content["Tweet_url"])
                 if image == 0:
-                    # set basic tweet info
-                    embed.set_color(1942002)
-                    embed.set_description(self.content["Description"])
-                    embed.set_author(
-                        name=self.content["Author"],
-                        url=self.content["Author_url"],
-                        icon_url=self.content["Author_icon_img"],
-                    )
-                    embed.add_embed_field(
-                        name="Likes", value=self.content["Likes"], inline=True
-                    )
-                    embed.add_embed_field(
-                        name="Retweets", value=self.content["Retweets"], inline=True
-                    )
-                    embed.set_footer(
-                        text="Twitter",
-                        proxy_icon_url="https://images-ext-1.discordapp.net/external/bXJWV2Y_F3XSra_kEqIYXAAsI3m1meckfLhYuWzxIfI/https/abs.twimg.com/icons/apple-touch-icon-192x192.png",
-                        icon_url="https://abs.twimg.com/icons/apple-touch-icon-192x192.png",
-                    )
-                    embed.set_timestamp(timestamp=self.content["Timestamp"])
+                    embed = self.twitter_embed_block(isBase=True)
+                else:
+                    embed = self.twitter_embed_block(isBase=False)
 
                 embed.set_image(url=image_list[image])
                 self.embed_list.append(embed)
+
+        elif type == "Video":
+            if self.content["Video_url"] is None:
+                logging.warning("Failed to fetch video url")
+            self.video["url"] = self.content["Video_url"]
+            self.video["thumbnail"] = self.content["Thumbnail"]
+
+            # embed.set_thumbnail(url=thumb, height=720, width=480)
 
 
 class DiscordClient(discord.Client):
@@ -221,11 +262,18 @@ class DiscordClient(discord.Client):
                             continue
                         logging.info("Hidden image found... Start processing")
                         tweet.download_image()
+
                     elif tweet.type == "Video":
-                        tweet.download_video()
-                        continue  # not implemented yet
+                        if not tweet.is_hidden():
+                            logging.info("This is not a hidden tweet... Skipping")
+                            # no need to post this video/gif
+                            continue
+                        logging.info("Hidden video/gif found... Start processing")
+                        tweet.download_video(method="youtube-dl")
+
                     elif tweet.type == "Text":
                         continue  # not implemented yet
+
                     else:
                         logging.warning("Failed to process, not a valid tweet?")
                         continue  # not implemented yet
@@ -236,11 +284,16 @@ class DiscordClient(discord.Client):
                     webhook = await self.get_webhook(message)
 
                     tweet_output = tweet.output()
-                    embed_list = DiscordMessage(tweet_output).embed_list
 
                     # add content to webhook message
-                    for embed in embed_list:
-                        webhook.add_embed(embed)
+                    message_content = DiscordMessage(tweet_output)
+                    if tweet.type == "Image":
+                        embed_list = message_content.embed_list
+                        for embed in embed_list:
+                            webhook.add_embed(embed)
+                    elif tweet.type == "Video":
+                        video = message_content.video
+                        webhook.set_content(video["url"])
 
                     # send message to this channel!
                     sent_webhook = webhook.execute()
@@ -253,7 +306,7 @@ class DiscordClient(discord.Client):
                     # Check if this message has embed again (if true, delete the sent webhook)
                     await asyncio.sleep(1)
 
-                    if message.embeds:
+                    if message.embeds and tweet.type == "Image":
                         embed_url_list = [embed.url for embed in message.embeds]
                         if tweet.url in embed_url_list:
                             # delete latest image from bot
