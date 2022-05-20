@@ -1,6 +1,7 @@
 import logging
 import os
 import re
+import time
 from datetime import datetime
 from logging.handlers import RotatingFileHandler
 
@@ -239,14 +240,21 @@ class MyClient(discord.Client):
 
                     # send message to this channel!
                     sent_webhook = webhook.execute()
+                    # check status code
+                    if sent_webhook.status_code >= 400:
+                        logging.warning("Failed to sent webhook!")
+                    else:
+                        logging.info("Successfully sent message to channel")
 
                     # Check if this message has embed again (if true, delete the sent webhook)
+                    time.sleep(5)
+
                     if message.embeds:
                         embed_url_list = [embed.url for embed in message.embeds]
                         if tweet.url in embed_url_list:
                             # delete latest image from bot
                             logging.info(
-                                "Deleting sent webhook, previous message has embed"
+                                "Deleting sent webhook, previous message has embed (should not be sent)"
                             )
                             webhook.delete(sent_webhook)
 
