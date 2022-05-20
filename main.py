@@ -7,7 +7,7 @@ from logging.handlers import RotatingFileHandler
 import discord
 import requests
 import twitter
-from discord_webhook import DiscordWebhook, DiscordEmbed
+from discord_webhook import DiscordEmbed, DiscordWebhook
 from dotenv import load_dotenv
 
 re_status = re.compile("\\w{1,15}\\/(status|statuses)\\/\\d{2,20}")
