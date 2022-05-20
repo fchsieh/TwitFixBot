@@ -10,8 +10,10 @@ from dotenv import load_dotenv
 
 re_status = re.compile("\\w{1,15}\\/(status|statuses)\\/\\d{2,20}")
 
-# Set webhook name
-webhook_name = ""
+# Set bot info
+WEBHOOK_NAME = ""
+AVATAR_IMG = "./avatar.jpeg"
+BOT_AVATAR = None
 # Set twitter api
 TwitterAPI = None
 
@@ -72,7 +74,10 @@ class Tweet:
         )
         self.content["Author_url"] = "https://twitter.com/{}".format(screen_name)
         self.content["Author_icon_img"] = self.tweet["user"]["profile_image_url_https"]
-        self.content["Description"] = self.tweet["full_text"]
+        if "full_text" not in self.tweet:
+            self.content["Description"] = self.tweet["text"]  # Not sure about this
+        else:
+            self.content["Description"] = self.tweet["full_text"].rsplit(" ", 1)[0]
         self.content["Likes"] = self.tweet["favorite_count"]
         self.content["Retweets"] = self.tweet["retweet_count"]
         created_at = datetime.strptime(
@@ -89,7 +94,6 @@ class Tweet:
             imgs[i] = media["media_url_https"]
             i = i + 1
 
-        # print(imgs)
         imgs[4] = i
         images = imgs
         thumb = self.tweet["extended_entities"]["media"][0]["media_url_https"]
@@ -159,24 +163,22 @@ class DiscordMessage:
 
 class MyClient(discord.Client):
     async def on_ready(self):
-        print("Logged on as {0}!".format(self.user))
+        print("[INIT] Logged on as {0}!".format(self.user))
 
     async def get_webhook(self, message):
         ch_webhooks = await message.channel.webhooks()
         webhook = None
         if len(ch_webhooks) == 0:
             # create webhook for twitter-fix bot
-            fp = open("./avatar.jpeg", "rb")
             webhook = await message.channel.create_webhook(
-                name=webhook_name, avatar=fp.read()
+                name=WEBHOOK_NAME, avatar=BOT_AVATAR
             )
         else:
-            webhook = discord.utils.get(ch_webhooks, name=webhook_name)
+            webhook = discord.utils.get(ch_webhooks, name=WEBHOOK_NAME)
             if webhook is None:
                 # need to create a new webhook for this app
-                fp = open("./avatar.jpeg", "rb")
                 webhook = await message.channel.create_webhook(
-                    name=webhook_name, avatar=fp.read()
+                    name=WEBHOOK_NAME, avatar=BOT_AVATAR
                 )
 
         webhook_url = webhook.url
@@ -199,22 +201,23 @@ class MyClient(discord.Client):
             is_tweet = self.is_valid_twitter_url(msg)
             if is_tweet is not None:
                 twitter_url = is_tweet
-                print("> Tweet Found: %s" % twitter_url)
+                print("> Tweet Found: {}".format(twitter_url))
                 # Try to fetch tweet object
                 tweet = Tweet(twitter_url)
                 if tweet is not None:  # A valid message found!
                     if tweet.type == "Image":
                         if not tweet.is_hidden():
+                            print(">> This is not a hidden tweet")
                             # no need to post this image
                             continue
-                        print(">> Hidden image found, start posting")
+                        print(">> Hidden image found... Start processing")
                         tweet.download_image()
                     elif tweet.type == "Video":
                         continue  # not implemented yet
                     elif tweet.type == "Text":
                         continue  # not implemented yet
                     else:
-                        print("Error, not a valid tweet?")
+                        print("[ERR] Error, not a valid tweet?")
                         continue  # not implemented yet
 
                     # Build tweet info (author, date, url...)
@@ -230,9 +233,9 @@ class MyClient(discord.Client):
                         json=main_content,
                     )
                     if post_res.status_code == 400:
-                        print("Failed to post to the webhook!")
+                        print("[ERR] Failed to post to the webhook")
                 else:
-                    print("Failed to fetch this tweet!")
+                    print("[ERR] Failed to fetch this tweet!")
                     continue
 
     def is_valid_twitter_url(self, url):
@@ -254,8 +257,12 @@ class MyClient(discord.Client):
 
 if __name__ == "__main__":
     load_dotenv()
-    webhook_name = os.environ.get("WEBHOOK_NAME")
+    # Set global variables and bot configuration
+    WEBHOOK_NAME = os.environ.get("WEBHOOK_NAME")
+    fp = open(AVATAR_IMG, "rb")
+    BOT_AVATAR = fp.read()
+
     TwitterAPI = TwitterClient()
-    TOKEN = os.environ.get("CLIENT_TOKEN")
+    DISCORD_TOKEN = os.environ.get("DISCORD_CLIENT_TOKEN")
     client = MyClient()
-    client.run(TOKEN)
+    client.run(DISCORD_TOKEN)
