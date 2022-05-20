@@ -19,7 +19,7 @@ AVATAR_IMG = "./avatar.jpg"
 BOT_AVATAR = None
 LOG_NAME = "twitfix.log"
 # Set twitter api
-TwitterAPI = None
+TwitterCli = None
 
 
 class TwitterClient:
@@ -55,7 +55,7 @@ class Tweet:
     def process_tweet(self):
         twid = int(re.sub(r"\?.*$", "", self.url.rsplit("/", 1)[-1]))
         try:
-            self.tweet = TwitterAPI.twitter_api.statuses.show(
+            self.tweet = TwitterCli.twitter_api.statuses.show(
                 _id=twid, tweet_mode="extended"
             )
         except:
@@ -109,10 +109,11 @@ class Tweet:
         self.content["Tweet_url"] = self.url
         self.content["Type"] = self.type
 
-    def download_vid(self):
+    def download_video(self):
         if self.type != "Video":
             return
-        pass
+        logging.debug("Video download is not implemented yet!")
+        return
 
     def output(self):
         return self.content
@@ -159,7 +160,7 @@ class DiscordMessage:
                 self.embed_list.append(embed)
 
 
-class MyClient(discord.Client):
+class DiscordClient(discord.Client):
     async def on_ready(self):
         logging.info("Logged on as {0}!".format(self.user))
 
@@ -196,7 +197,7 @@ class MyClient(discord.Client):
         message_list = message.content.split()
         if message.content.startswith("||") and message.content.endswith("||"):
             # this is a spoiler message, skip
-            logging.info("Spoiler message, skipped")
+            logging.info("Spoiler message, skipping")
             return
 
         embeds_list = []
@@ -207,6 +208,7 @@ class MyClient(discord.Client):
         for msg in message_list:
             is_tweet = self.is_valid_twitter_url(msg)
             if is_tweet is not None:
+                # Valid tweet found
                 twitter_url = is_tweet
                 logging.info("Tweet Found: {}".format(twitter_url))
                 # Try to fetch tweet object
@@ -214,12 +216,13 @@ class MyClient(discord.Client):
                 if tweet is not None:  # A valid message found!
                     if tweet.type == "Image":
                         if not tweet.is_hidden() or tweet.url in embeds_list:
-                            logging.info("This is not a hidden tweet... Skipped")
+                            logging.info("This is not a hidden tweet... Skipping")
                             # no need to post this image
                             continue
                         logging.info("Hidden image found... Start processing")
                         tweet.download_image()
                     elif tweet.type == "Video":
+                        tweet.download_video()
                         continue  # not implemented yet
                     elif tweet.type == "Text":
                         continue  # not implemented yet
@@ -248,7 +251,7 @@ class MyClient(discord.Client):
                         logging.info("Successfully sent message to channel")
 
                     # Check if this message has embed again (if true, delete the sent webhook)
-                    await asyncio.sleep(2)
+                    await asyncio.sleep(1)
 
                     if message.embeds:
                         embed_url_list = [embed.url for embed in message.embeds]
@@ -260,18 +263,27 @@ class MyClient(discord.Client):
                             webhook.delete(sent_webhook)
 
                 else:
+                    # Not a valid tweet
                     logging.warning("Failed to process this tweet")
                     continue
+            else:
+                # This is not a tweet url, skipping...
+                continue
 
     def is_valid_twitter_url(self, url):
-        if "://twitter.com" not in url:
+        if "twitter.com" not in url:
+            # Not a valid url, skipping
             return None
+
         match = re_status.search(url)
         if match is not None:
             twitter_url = url
             if match.start() == 0:
                 twitter_url = "https://twitter.com/" + url
             # try to request this url and check whether it is a valid tweet
+            if not url.startswith("https://twitter.com"):
+                # not a valied tweet! (status found, but might not be a twitter url)
+                return None
             status_code = requests.get(twitter_url)
             if status_code != 404:
                 return twitter_url
@@ -296,11 +308,13 @@ if __name__ == "__main__":
     load_dotenv()
     # Set global variables and bot configuration
     WEBHOOK_NAME = os.environ.get("WEBHOOK_NAME")
-
     fp = open(AVATAR_IMG, "rb")
     BOT_AVATAR = fp.read()
 
-    TwitterAPI = TwitterClient()
+    # Set twitter client
+    TwitterCli = TwitterClient()
+
+    # Set discord client
     DISCORD_TOKEN = os.environ.get("DISCORD_CLIENT_TOKEN")
-    client = MyClient()
-    client.run(DISCORD_TOKEN)
+    DiscordCli = DiscordClient()
+    DiscordCli.run(DISCORD_TOKEN)
