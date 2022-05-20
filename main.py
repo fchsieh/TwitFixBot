@@ -46,7 +46,10 @@ class Tweet:
         self.process_tweet()
 
     def is_hidden(self):
-        return self.tweet["possibly_sensitive"]
+        if self.tweet["possibly_sensitive"] is not None:
+            return self.tweet["possibly_sensitive"]
+        else:
+            return False
 
     def process_tweet(self):
         twid = int(re.sub(r"\?.*$", "", self.url.rsplit("/", 1)[-1]))
@@ -86,7 +89,7 @@ class Tweet:
         created_at = datetime.strptime(
             self.tweet["created_at"], "%a %b %d %H:%M:%S +0000 %Y"
         )
-        self.content["Time"] = created_at.strftime("%Y/%m/%d")
+        self.content["Timestamp"] = created_at.isoformat()
 
     def download_image(self):
         if self.type != "Image" or self.tweet is None:
@@ -151,12 +154,14 @@ class DiscordMessage:
                             "inline": "true",
                         },
                     ]
-                    image_content["color"] = 0x3498DB
+                    image_content["color"] = 1942002
                     image_content["description"] = self.content["Description"]
                     image_content["footer"] = {
-                        "text": "Twitter  |  {}".format(self.content["Time"]),
-                        "icon_url": "https://cdn.cms-twdigitalassets.com/content/dam/developer-twitter/images/Twitter_logo_blue_16.png",
+                        "text": "Twitter",
+                        "proxy_icon_url": "https://images-ext-1.discordapp.net/external/bXJWV2Y_F3XSra_kEqIYXAAsI3m1meckfLhYuWzxIfI/https/abs.twimg.com/icons/apple-touch-icon-192x192.png",
+                        "icon_url": "https://abs.twimg.com/icons/apple-touch-icon-192x192.png",
                     }
+                    image_content["timestamp"] = self.content["Timestamp"]
 
                 image_content["image"] = {"url": image_list[image]}
                 message_content["embeds"].append(image_content)
