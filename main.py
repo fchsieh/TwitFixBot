@@ -15,7 +15,7 @@ re_status = re.compile("\\w{1,15}\\/(status|statuses)\\/\\d{2,20}")
 
 # Set bot info
 WEBHOOK_NAME = ""
-AVATAR_IMG = "./avatar.jpeg"
+AVATAR_IMG = "./avatar.jpg"
 BOT_AVATAR = None
 LOG_NAME = "twitfix.log"
 # Set twitter api
@@ -194,8 +194,9 @@ class MyClient(discord.Client):
             return
 
         message_list = message.content.split()
-        if message_list[0].startswith("||") and message_list[-1].endswith("||"):
+        if message.content.startswith("||") and message.content.endswith("||"):
             # this is a spoiler message, skip
+            logging.info("Spoiler message, skipped")
             return
 
         embeds_list = []
