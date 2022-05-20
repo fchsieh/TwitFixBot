@@ -167,15 +167,17 @@ class MyClient(discord.Client):
         webhook = None
         if len(ch_webhooks) == 0:
             # create webhook for twitter-fix bot
+            fp = open("./avatar.jpeg", "rb")
             webhook = await message.channel.create_webhook(
-                name="twitter-fix", reason="Webhook is required to post fix tweet!"
+                name="rinchan", avatar=fp.read()
             )
         else:
             webhook = discord.utils.get(ch_webhooks, name="twitter-fix")
             if webhook is None:
                 # need to create a new webhook for this app
+                fp = open("./avatar.jpeg", "rb")
                 webhook = await message.channel.create_webhook(
-                    name="twitter-fix", reason="Webhook is required to post fix tweet!"
+                    name="rinchan", avatar=fp.read()
                 )
 
         webhook_url = webhook.url
@@ -235,7 +237,7 @@ class MyClient(discord.Client):
                     continue
 
     def is_valid_twitter_url(self, url):
-        if "twitter.com" not in url:
+        if "://twitter.com" not in url:
             return None
         match = re_status.search(url)
         if match is not None:
