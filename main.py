@@ -97,11 +97,8 @@ class Tweet:
         self.content["Type"] = self.type
 
     def download_vid(self):
-        if self.type != "Video`":
+        if self.type != "Video":
             return
-        pass
-
-    def download_info(self):
         pass
 
     def output(self):
