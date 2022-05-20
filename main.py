@@ -11,7 +11,7 @@ from dotenv import load_dotenv
 re_status = re.compile("\\w{1,15}\\/(status|statuses)\\/\\d{2,20}")
 
 # Set webhook name
-webhook_name = "aqubot"
+webhook_name = ""
 # Set twitter api
 TwitterAPI = None
 
@@ -254,6 +254,7 @@ class MyClient(discord.Client):
 
 if __name__ == "__main__":
     load_dotenv()
+    webhook_name = os.environ.get("WEBHOOK_NAME")
     TwitterAPI = TwitterClient()
     TOKEN = os.environ.get("CLIENT_TOKEN")
     client = MyClient()
