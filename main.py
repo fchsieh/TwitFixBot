@@ -2,142 +2,28 @@ import asyncio
 import logging
 import os
 import re
-from datetime import datetime
+
 from logging.handlers import RotatingFileHandler
 
 import discord
 import requests
-import twitter
-import youtube_dl
 from discord_webhook import DiscordEmbed, DiscordWebhook
 from dotenv import load_dotenv
 
+from twitter_client import *
+
 re_status = re.compile("\\w{1,15}\\/(status|statuses)\\/\\d{2,20}")
 
+# Set global configuration
+TWITTER_CLI = None
+
 # Set bot info
+BOT_NAME = ""
 WEBHOOK_NAME = ""
-AVATAR_IMG = "./avatar.jpg"
-BOT_AVATAR = None
+AVATAR_IMG = "./avatar.jpg"  # Default image when creating webhook
+WEBHOOK_AVATAR = None
+WEBHOOK_AVATAR_URL = None
 LOG_NAME = "twitfix.log"
-# Set twitter api
-TwitterCli = None
-
-
-class TwitterClient:
-    def __init__(self):
-        _access_token = os.environ.get("TWITTER_ACCESS_TOKEN")
-        _access_token_secret = os.environ.get("TWITTER_ACCESS_TOKEN_SECRET")
-        _api_key = os.environ.get("TWITTER_API_KEY")
-        _api_secret = os.environ.get("TWITTER_API_SECRET")
-
-        _auth = twitter.oauth.OAuth(
-            _access_token,
-            _access_token_secret,
-            _api_key,
-            _api_secret,
-        )
-        self.twitter_api = twitter.Twitter(auth=_auth)
-
-
-class Tweet:
-    def __init__(self, url=None):
-        self.url = url
-        self.tweet = None  # tweet object from twitter api
-        self.type = None  # tweet type: Image, Video, Text
-        self.content = {}  # content that will be passed to DiscordMessage
-        self.process_tweet()
-
-    def is_hidden(self):
-        if self.tweet["possibly_sensitive"] is not None:
-            return self.tweet["possibly_sensitive"]
-        else:
-            return False
-
-    def process_tweet(self):
-        twid = int(re.sub(r"\?.*$", "", self.url.rsplit("/", 1)[-1]))
-        try:
-            self.tweet = TwitterCli.twitter_api.statuses.show(
-                _id=twid, tweet_mode="extended"
-            )
-        except:
-            # not a valid tweet
-            self.tweet = None
-
-        if self.tweet is not None:
-            self.tweet_type()
-
-    def tweet_type(self):
-        if "extended_entities" in self.tweet:
-            if "video_info" in self.tweet["extended_entities"]["media"][0]:
-                self.type = "Video"
-            else:
-                self.type = "Image"
-        else:
-            self.type = "Text"
-
-    def fetch_info(self):
-        screen_name = self.tweet["user"]["screen_name"]
-        self.content["Author"] = "{} (@{})".format(
-            self.tweet["user"]["name"], screen_name
-        )
-        self.content["Author_url"] = "https://twitter.com/{}".format(screen_name)
-        self.content["Author_icon_img"] = self.tweet["user"]["profile_image_url_https"]
-        if "full_text" not in self.tweet:
-            self.content["Description"] = self.tweet["text"]  # Not sure about this
-        else:
-            self.content["Description"] = self.tweet["full_text"].rsplit(" ", 1)[0]
-        self.content["Likes"] = self.tweet["favorite_count"]
-        self.content["Retweets"] = self.tweet["retweet_count"]
-        created_at = datetime.strptime(
-            self.tweet["created_at"], "%a %b %d %H:%M:%S +0000 %Y"
-        )
-        self.content["Timestamp"] = created_at.timestamp()
-        self.content["Type"] = self.type
-        self.content["Tweet_url"] = self.url
-
-    def download_image(self):
-        if self.type != "Image" or self.tweet is None:
-            return
-        imgs = ["", "", "", "", ""]
-        i = 0
-        for media in self.tweet["extended_entities"]["media"]:
-            imgs[i] = media["media_url_https"]
-            i += 1
-
-        imgs[4] = i
-        images = imgs
-        self.content["Images"] = images
-
-    def download_video(self, method="youtube-dl"):
-        if self.type != "Video" or self.tweet is None:
-            return
-        vid_url = None
-
-        if method == "youtube-dl":
-            # use youtube_dl method
-            with youtube_dl.YoutubeDL({"outtmpl": "%(id)s.%(ext)s"}) as ydl:
-                result = ydl.extract_info(self.url, download=False)
-                self.content["Video_url"] = result["url"]
-                self.content["Thumbnail"] = result["thumbnail"]
-
-        elif method == "api":
-            if self.tweet["extended_entities"]["media"][0]["video_info"]["variants"]:
-                best_bitrate = 0
-                thumb = self.tweet["extended_entities"]["media"][0]["media_url"]
-                for video in self.tweet["extended_entities"]["media"][0]["video_info"][
-                    "variants"
-                ]:
-                    if (
-                        video["content_type"] == "video/mp4"
-                        and video["bitrate"] > best_bitrate
-                    ):
-                        vid_url = video["url"]
-                        best_bitrate = video["bitrate"]
-                self.content["Video_url"] = vid_url
-                self.content["Thumbnail"] = thumb
-
-    def output(self):
-        return self.content
 
 
 class DiscordMessage:
@@ -193,12 +79,13 @@ class DiscordMessage:
                 self.embed_list.append(embed)
 
         elif type == "Video":
+            embed = self.twitter_embed_block(isBase=True)
+            self.embed_list.append(embed)
+
             if self.content["Video_url"] is None:
                 logging.warning("Failed to fetch video url")
             self.video["url"] = self.content["Video_url"]
             self.video["thumbnail"] = self.content["Thumbnail"]
-
-            # embed.set_thumbnail(url=thumb, height=720, width=480)
 
 
 class DiscordClient(discord.Client):
@@ -211,14 +98,14 @@ class DiscordClient(discord.Client):
         if len(channel_all_webhooks) == 0:
             # create webhook for twitter-fix bot
             send_webhook = await message.channel.create_webhook(
-                name=WEBHOOK_NAME, avatar=BOT_AVATAR
+                name=BOT_NAME, avatar=WEBHOOK_AVATAR
             )
         else:
-            send_webhook = discord.utils.get(channel_all_webhooks, name=WEBHOOK_NAME)
+            send_webhook = discord.utils.get(channel_all_webhooks, name=BOT_NAME)
             if send_webhook is None:
                 # need to create a new webhook for this app
                 send_webhook = await message.channel.create_webhook(
-                    name=WEBHOOK_NAME, avatar=BOT_AVATAR
+                    name=BOT_NAME, avatar=WEBHOOK_AVATAR
                 )
 
         webhook_url = send_webhook.url
@@ -226,13 +113,55 @@ class DiscordClient(discord.Client):
             logging.error("Failed to fetch webhook")
             return
 
-        webhook = DiscordWebhook(url=webhook_url, rate_limit_retry=True)
+        webhook = DiscordWebhook(
+            url=webhook_url,
+            rate_limit_retry=True,
+            username=WEBHOOK_NAME,
+            avatar_url=WEBHOOK_AVATAR_URL if WEBHOOK_AVATAR_URL else None,
+        )
 
         return webhook
 
+    async def print_help(self, channel):
+        help_msg = discord.Embed(title="Help!")
+        cmd_table = {
+            "help": "Output this help message",
+            "change_avatar": "Change webhook avatar",
+            "change_name": "Change webhook name",
+        }
+        for cmd_name, cmd_desc in cmd_table.items():
+            help_msg.add_field(name="#%s" % cmd_name, value=cmd_desc, inline=False)
+
+        await channel.send(embed=help_msg)
+
+    async def fun(self, channel):
+        pass
+
+    async def handle_dm_message(self, message):
+        msg_list = message.content.split()
+        if msg_list[0].startswith("#"):
+            cmd = msg_list[0][1:]
+            if cmd == "help":
+                await self.print_help(message.channel)
+            elif cmd == "change_avatar":
+                global WEBHOOK_AVATAR_URL
+                WEBHOOK_AVATAR_URL = msg_list[1]
+                await message.channel.send("Changed avatar to " + WEBHOOK_AVATAR_URL)
+            elif cmd == "change_name":
+                global WEBHOOK_NAME
+                WEBHOOK_NAME = msg_list[1]
+                await message.channel.send("Changed name to " + WEBHOOK_NAME)
+        else:
+            await self.fun(message.channel)
+
     async def on_message(self, message):
-        # check if user sends a twitter url
+        # check if user sends a message
         if message.author.bot:
+            return
+
+        # Check if this is a dm message
+        if not message.guild:
+            await self.handle_dm_message(message)
             return
 
         message_list = message.content.split()
@@ -253,7 +182,7 @@ class DiscordClient(discord.Client):
                 twitter_url = is_tweet
                 logging.info("Tweet Found: {}".format(twitter_url))
                 # Try to fetch tweet object
-                tweet = Tweet(twitter_url)
+                tweet = Tweet(twitter_url, TWITTER_CLI)
                 if tweet is not None:  # A valid message found!
                     if tweet.type == "Image":
                         if not tweet.is_hidden() or tweet.url in embeds_list:
@@ -291,14 +220,20 @@ class DiscordClient(discord.Client):
                         embed_list = message_content.embed_list
                         for embed in embed_list:
                             webhook.add_embed(embed)
+
                     elif tweet.type == "Video":
                         video = message_content.video
+                        embed = message_content.embed_list[0]
+                        webhook.add_embed(embed)
+                        # send embed first
+                        webhook.execute()
+                        webhook.remove_embeds()
                         webhook.set_content(video["url"])
 
                     # send message to this channel!
                     sent_webhook = webhook.execute()
                     # check status code
-                    if sent_webhook.status_code >= 400:
+                    if sent_webhook.status_code >= 400:  # Server or Client error
                         logging.warning("Failed to sent webhook!")
                     else:
                         logging.info("Successfully sent message to channel")
@@ -360,12 +295,11 @@ if __name__ == "__main__":
 
     load_dotenv()
     # Set global variables and bot configuration
+    BOT_NAME = os.environ.get("BOT_NAME")
     WEBHOOK_NAME = os.environ.get("WEBHOOK_NAME")
     fp = open(AVATAR_IMG, "rb")
-    BOT_AVATAR = fp.read()
-
-    # Set twitter client
-    TwitterCli = TwitterClient()
+    WEBHOOK_AVATAR = fp.read()
+    TWITTER_CLI = TwitterClient()
 
     # Set discord client
     DISCORD_TOKEN = os.environ.get("DISCORD_CLIENT_TOKEN")
