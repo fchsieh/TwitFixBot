@@ -38,7 +38,7 @@ class DiscordMessage:
         self.discord_colors = {"Twitter": 1942002}
         self.build_message()
 
-    def twitter_embed_block(self, isBase=False, headerOnly=False, footerOnly=False):
+    def twitter_embed_block(self, isBase=False, noFooter=False, footerOnly=False):
         embed = DiscordEmbed(url=self.content["Tweet_url"])
         if isBase:
             # set basic tweet info
@@ -55,28 +55,13 @@ class DiscordMessage:
             embed.add_embed_field(
                 name="Retweets", value=self.content["Retweets"], inline=True
             )
-            embed.set_footer(
-                text="Twitter",
-                proxy_icon_url="https://images-ext-1.discordapp.net/external/bXJWV2Y_F3XSra_kEqIYXAAsI3m1meckfLhYuWzxIfI/https/abs.twimg.com/icons/apple-touch-icon-192x192.png",
-                icon_url="https://abs.twimg.com/icons/apple-touch-icon-192x192.png",
-            )
-            embed.set_timestamp(timestamp=self.content["Timestamp"])
-
-        elif not isBase and headerOnly:
-            # set basic tweet info
-            embed.set_color(self.discord_colors["Twitter"])
-            embed.set_description(self.content["Description"])
-            embed.set_author(
-                name=self.content["Author"],
-                url=self.content["Author_url"],
-                icon_url=self.content["Author_icon_img"],
-            )
-            embed.add_embed_field(
-                name="Likes", value=self.content["Likes"], inline=True
-            )
-            embed.add_embed_field(
-                name="Retweets", value=self.content["Retweets"], inline=True
-            )
+            if not noFooter:
+                embed.set_footer(
+                    text="Twitter",
+                    proxy_icon_url="https://images-ext-1.discordapp.net/external/bXJWV2Y_F3XSra_kEqIYXAAsI3m1meckfLhYuWzxIfI/https/abs.twimg.com/icons/apple-touch-icon-192x192.png",
+                    icon_url="https://abs.twimg.com/icons/apple-touch-icon-192x192.png",
+                )
+                embed.set_timestamp(timestamp=self.content["Timestamp"])
 
         elif not isBase and footerOnly:
             embed.set_footer(
@@ -106,7 +91,7 @@ class DiscordMessage:
                 self.embed_list.append(embed)
 
         elif type == "Video":
-            info = self.twitter_embed_block(isBase=False, headerOnly=True)
+            info = self.twitter_embed_block(isBase=True, noFooter=True)
             footer = self.twitter_embed_block(isBase=False, footerOnly=True)
             self.embed_list.append(info)
             self.embed_list.append(footer)
@@ -267,7 +252,7 @@ class DiscordClient(discord.Client):
                             # no need to post this video/gif
                             continue
                         logging.info("Hidden video/gif found... Start processing")
-                        tweet.download_video(method="youtube-dl")
+                        tweet.download_video()
 
                     elif tweet.type == "Text":
                         continue  # not implemented yet
@@ -294,17 +279,20 @@ class DiscordClient(discord.Client):
                         video = message_content.video
                         tweet_info = message_content.embed_list[0]
                         tweet_footer = message_content.embed_list[1]
-                        webhook.add_embed(tweet_info)
+
                         # Send tweet info first
+                        webhook.add_embed(tweet_info)
                         info_wh = webhook.execute()
                         webhook.remove_embeds()
                         if info_wh.status_code not in REQUEST_SUCCESS_CODE:
                             logging.warning("Failed to sent video tweet info!")
+
                         # Send video url
                         webhook.set_content(video["url"])
                         video_url_wh = webhook.execute()
                         if video_url_wh.status_code not in REQUEST_SUCCESS_CODE:
                             logging.warning("Failed to sent video url!")
+
                         # Add footer and remove sent video url
                         # footer will be sent in the next webhook
                         webhook.content = ""

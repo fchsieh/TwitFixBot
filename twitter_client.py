@@ -95,33 +95,33 @@ class Tweet:
         images = imgs
         self.content["Images"] = images
 
-    def download_video(self, method="youtube-dl"):
+    def download_video(self):
         if self.type != "Video" or self.tweet is None:
             return
         vid_url = None
 
-        if method == "youtube-dl":
-            # use youtube_dl method
+        # Use twitter api to fetch video first
+        if self.tweet["extended_entities"]["media"][0]["video_info"]["variants"]:
+            best_bitrate = 0
+            thumb = self.tweet["extended_entities"]["media"][0]["media_url"]
+            for video in self.tweet["extended_entities"]["media"][0]["video_info"][
+                "variants"
+            ]:
+                if (
+                    video["content_type"] == "video/mp4"
+                    and video["bitrate"] > best_bitrate
+                ):
+                    vid_url = video["url"]
+                    best_bitrate = video["bitrate"]
+            self.content["Video_url"] = vid_url
+            self.content["Thumbnail"] = thumb
+
+        if vid_url is None or not vid_url.startswith("https://"):
+            # use youtube_dl method instead
             with youtube_dl.YoutubeDL({"outtmpl": "%(id)s.%(ext)s"}) as ydl:
                 result = ydl.extract_info(self.url, download=False)
                 self.content["Video_url"] = result["url"]
                 self.content["Thumbnail"] = result["thumbnail"]
-
-        elif method == "api":
-            if self.tweet["extended_entities"]["media"][0]["video_info"]["variants"]:
-                best_bitrate = 0
-                thumb = self.tweet["extended_entities"]["media"][0]["media_url"]
-                for video in self.tweet["extended_entities"]["media"][0]["video_info"][
-                    "variants"
-                ]:
-                    if (
-                        video["content_type"] == "video/mp4"
-                        and video["bitrate"] > best_bitrate
-                    ):
-                        vid_url = video["url"]
-                        best_bitrate = video["bitrate"]
-                self.content["Video_url"] = vid_url
-                self.content["Thumbnail"] = thumb
 
         # shorten video url
         url = self.content["Video_url"]
