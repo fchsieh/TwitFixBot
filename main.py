@@ -288,7 +288,8 @@ class DiscordClient(discord.Client):
                             logging.warning("Failed to sent video tweet info!")
 
                         # Send video url
-                        webhook.set_content(video["url"])
+                        # Add a block quote to align with info/footer
+                        webhook.set_content("> " + video["url"])
                         video_url_wh = webhook.execute()
                         if video_url_wh.status_code not in REQUEST_SUCCESS_CODE:
                             logging.warning("Failed to sent video url!")
