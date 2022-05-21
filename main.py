@@ -153,12 +153,18 @@ class DiscordClient(discord.Client):
                 await self.print_help(message.channel)
             elif cmd == "change_avatar":
                 global WEBHOOK_AVATAR_URL
+                logging.info("Avatar has been changed.")
                 WEBHOOK_AVATAR_URL = msg_list[1]
                 await message.channel.send(
                     "Changed webhook avatar to <%s>" % WEBHOOK_AVATAR_URL
                 )
             elif cmd == "change_name":
                 global WEBHOOK_NAME
+                logging.info(
+                    "Webhook name has been changed from {} to {}".format(
+                        WEBHOOK_NAME, msg_list[1]
+                    )
+                )
                 WEBHOOK_NAME = msg_list[1]
                 await message.channel.send("Changed webhook name to " + WEBHOOK_NAME)
         else:
