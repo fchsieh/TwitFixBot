@@ -15,6 +15,7 @@ from twitter_client import *
 re_status = re.compile("\\w{1,15}\\/(status|statuses)\\/\\d{2,20}")
 
 # Set global configuration
+REQUEST_SUCCESS_CODE = {200, 204}
 TWITTER_CLI = None
 
 # Set bot info
@@ -37,7 +38,7 @@ class DiscordMessage:
         self.discord_colors = {"Twitter": 1942002}
         self.build_message()
 
-    def twitter_embed_block(self, isBase=False):
+    def twitter_embed_block(self, isBase=False, headerOnly=False, footerOnly=False):
         embed = DiscordEmbed(url=self.content["Tweet_url"])
         if isBase:
             # set basic tweet info
@@ -60,6 +61,32 @@ class DiscordMessage:
                 icon_url="https://abs.twimg.com/icons/apple-touch-icon-192x192.png",
             )
             embed.set_timestamp(timestamp=self.content["Timestamp"])
+
+        elif not isBase and headerOnly:
+            # set basic tweet info
+            embed.set_color(self.discord_colors["Twitter"])
+            embed.set_description(self.content["Description"])
+            embed.set_author(
+                name=self.content["Author"],
+                url=self.content["Author_url"],
+                icon_url=self.content["Author_icon_img"],
+            )
+            embed.add_embed_field(
+                name="Likes", value=self.content["Likes"], inline=True
+            )
+            embed.add_embed_field(
+                name="Retweets", value=self.content["Retweets"], inline=True
+            )
+
+        elif not isBase and footerOnly:
+            embed.set_footer(
+                text="Twitter",
+                proxy_icon_url="https://images-ext-1.discordapp.net/external/bXJWV2Y_F3XSra_kEqIYXAAsI3m1meckfLhYuWzxIfI/https/abs.twimg.com/icons/apple-touch-icon-192x192.png",
+                icon_url="https://abs.twimg.com/icons/apple-touch-icon-192x192.png",
+            )
+            embed.set_timestamp(timestamp=self.content["Timestamp"])
+            embed.set_color(self.discord_colors["Twitter"])
+
         return embed
 
     def build_message(self):
@@ -79,8 +106,10 @@ class DiscordMessage:
                 self.embed_list.append(embed)
 
         elif type == "Video":
-            embed = self.twitter_embed_block(isBase=True)
-            self.embed_list.append(embed)
+            info = self.twitter_embed_block(isBase=False, headerOnly=True)
+            footer = self.twitter_embed_block(isBase=False, footerOnly=True)
+            self.embed_list.append(info)
+            self.embed_list.append(footer)
 
             if self.content["Video_url"] is None:
                 logging.warning("Failed to fetch video url")
@@ -123,11 +152,13 @@ class DiscordClient(discord.Client):
         return webhook
 
     async def print_help(self, channel):
-        help_msg = discord.Embed(title="DM me with commands")
+        help_msg = discord.Embed(title="DM me with command! #help")
         cmd_table = {
             "help": "Output this help message",
-            "change_avatar <url_link>": "Change webhook avatar",
-            "change_name <name>": "Change webhook name",
+            "set_avatar <url_link>": "Change webhook avatar",
+            "set_name <name>": "Change webhook name",
+            "get_avatar": "Get current webhook avatar",
+            "get_name": "Get current webhook name ",
         }
         for cmd_name, cmd_desc in cmd_table.items():
             help_msg.add_field(name="#%s" % cmd_name, value=cmd_desc, inline=False)
@@ -151,14 +182,14 @@ class DiscordClient(discord.Client):
             cmd = msg_list[0][1:]
             if cmd == "help":
                 await self.print_help(message.channel)
-            elif cmd == "change_avatar":
+            elif cmd == "set_avatar":
                 global WEBHOOK_AVATAR_URL
                 logging.info("Avatar has been changed.")
                 WEBHOOK_AVATAR_URL = msg_list[1]
                 await message.channel.send(
                     "Changed webhook avatar to <%s>" % WEBHOOK_AVATAR_URL
                 )
-            elif cmd == "change_name":
+            elif cmd == "set_name":
                 global WEBHOOK_NAME
                 logging.info(
                     "Webhook name has been changed from {} to {}".format(
@@ -167,6 +198,23 @@ class DiscordClient(discord.Client):
                 )
                 WEBHOOK_NAME = msg_list[1]
                 await message.channel.send("Changed webhook name to " + WEBHOOK_NAME)
+            elif cmd == "get_avatar":
+                if WEBHOOK_AVATAR_URL:
+                    await message.channel.send(
+                        "Current webhook avatar is " + WEBHOOK_AVATAR_URL
+                    )
+                else:
+                    await message.channel.send(
+                        "Current webhook avatar is default image"
+                    )
+            elif cmd == "get_name":
+                if WEBHOOK_NAME:
+                    await message.channel.send(
+                        "Current webhook name is " + WEBHOOK_NAME
+                    )
+                else:
+                    await message.channel.send("Current webhook name is default name")
+
         else:
             await self.fun(message.channel)
 
@@ -244,18 +292,29 @@ class DiscordClient(discord.Client):
 
                     elif tweet.type == "Video":
                         video = message_content.video
-                        embed = message_content.embed_list[0]
-                        webhook.add_embed(embed)
-                        # send embed first
-                        webhook.execute()
+                        tweet_info = message_content.embed_list[0]
+                        tweet_footer = message_content.embed_list[1]
+                        webhook.add_embed(tweet_info)
+                        # Send tweet info first
+                        info_wh = webhook.execute()
                         webhook.remove_embeds()
+                        if info_wh.status_code not in REQUEST_SUCCESS_CODE:
+                            logging.warning("Failed to sent video tweet info!")
+                        # Send video url
                         webhook.set_content(video["url"])
+                        video_url_wh = webhook.execute()
+                        if video_url_wh.status_code not in REQUEST_SUCCESS_CODE:
+                            logging.warning("Failed to sent video url!")
+                        # Add footer and remove sent video url
+                        # footer will be sent in the next webhook
+                        webhook.content = ""
+                        webhook.add_embed(tweet_footer)
 
                     # send message to this channel!
                     sent_webhook = webhook.execute()
                     # check status code
-                    if sent_webhook.status_code >= 400:  # Server or Client error
-                        logging.warning("Failed to sent webhook!")
+                    if sent_webhook.status_code not in REQUEST_SUCCESS_CODE:
+                        logging.warning("Failed to sent message webhook!")
                     else:
                         logging.info("Successfully sent message to channel")
 
@@ -294,7 +353,7 @@ class DiscordClient(discord.Client):
                 # not a valied tweet! (status found, but might not be a twitter url)
                 return None
             status_code = requests.get(twitter_url)
-            if status_code != 404:
+            if status_code not in REQUEST_SUCCESS_CODE:
                 return twitter_url
             else:
                 return None
