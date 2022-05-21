@@ -1,8 +1,8 @@
 import asyncio
 import logging
 import os
+import random
 import re
-
 from logging.handlers import RotatingFileHandler
 
 import discord
@@ -123,11 +123,11 @@ class DiscordClient(discord.Client):
         return webhook
 
     async def print_help(self, channel):
-        help_msg = discord.Embed(title="Help!")
+        help_msg = discord.Embed(title="DM me with commands")
         cmd_table = {
             "help": "Output this help message",
-            "change_avatar": "Change webhook avatar",
-            "change_name": "Change webhook name",
+            "change_avatar <url_link>": "Change webhook avatar",
+            "change_name <name>": "Change webhook name",
         }
         for cmd_name, cmd_desc in cmd_table.items():
             help_msg.add_field(name="#%s" % cmd_name, value=cmd_desc, inline=False)
@@ -135,7 +135,15 @@ class DiscordClient(discord.Client):
         await channel.send(embed=help_msg)
 
     async def fun(self, channel):
-        pass
+        await self.print_help(channel)
+        gif_list = [
+            "https://i.imgur.com/t1Iifjr.gif",
+            "https://i.imgur.com/ELiPyOi.gif",
+            "https://i.imgur.com/rlNzFXZ.gif",
+            "https://i.imgur.com/JvhprC9.gif",
+            "https://i.imgur.com/7CjTRo7.gif",
+        ]
+        await channel.send(gif_list[random.randint(0, len(gif_list) - 1)])
 
     async def handle_dm_message(self, message):
         msg_list = message.content.split()
@@ -146,22 +154,29 @@ class DiscordClient(discord.Client):
             elif cmd == "change_avatar":
                 global WEBHOOK_AVATAR_URL
                 WEBHOOK_AVATAR_URL = msg_list[1]
-                await message.channel.send("Changed avatar to " + WEBHOOK_AVATAR_URL)
+                await message.channel.send(
+                    "Changed webhook avatar to <%s>" % WEBHOOK_AVATAR_URL
+                )
             elif cmd == "change_name":
                 global WEBHOOK_NAME
                 WEBHOOK_NAME = msg_list[1]
-                await message.channel.send("Changed name to " + WEBHOOK_NAME)
+                await message.channel.send("Changed webhook name to " + WEBHOOK_NAME)
         else:
             await self.fun(message.channel)
 
     async def on_message(self, message):
         # check if user sends a message
-        if message.author.bot:
+        if message.author.bot or message.author == self.user:
             return
 
         # Check if this is a dm message
         if not message.guild:
             await self.handle_dm_message(message)
+            return
+
+        # Check if user mentions this bot
+        if self.user in message.mentions:
+            await self.fun(message.channel)
             return
 
         message_list = message.content.split()
