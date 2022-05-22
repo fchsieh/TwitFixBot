@@ -22,7 +22,7 @@ gif_list = [
     "https://i.imgur.com/rMGBqDw.mp4",
     "https://i.imgur.com/0qMjkp0.mp4",
     "https://i.imgur.com/1btGCc8.mp4",
-    "https://i.imgur.com/3owYjoS.mp4"
+    "https://i.imgur.com/3owYjoS.mp4",
 ]
 cmd_table = {
     "help": "Output this help message",
@@ -156,11 +156,11 @@ class DiscordClient(discord.Client):
             help_msg.add_field(name="#%s" % cmd_name, value=cmd_desc, inline=False)
 
         display_thumb = gif_list[random.randint(0, len(gif_list) - 1)]
-        help_msg.set_thumbnail(url=display_thumb)
+        help_msg.set_thumbnail(url=display_thumb[:-3] + "gifv")
         await channel.send(embed=help_msg)
 
     async def fun(self, channel):
-        await channel.send(gif_list[random.randint(0, len(gif_list) - 1)])
+        await channel.send(gif_list[random.randint(0, len(gif_list) - 1)][:-3])
 
     async def handle_dm_message(self, message):
         msg_list = message.content.split()
@@ -172,7 +172,7 @@ class DiscordClient(discord.Client):
                 global WEBHOOK_AVATAR_URL
                 logging.info(
                     "User {} changed webhook avatar to {}.".format(
-                        message.author, WEBHOOK_AVATAR_URL
+                        message.author, msg_list[1]
                     )
                 )
                 WEBHOOK_AVATAR_URL = msg_list[1]
