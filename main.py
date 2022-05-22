@@ -11,26 +11,14 @@ from discord_webhook import DiscordEmbed, DiscordWebhook
 from dotenv import load_dotenv
 
 from twitter_client import *
+from config import *
 
 re_status = re.compile("\\w{1,15}\\/(status|statuses)\\/\\d{2,20}")
 
 # Set global configuration
 REQUEST_SUCCESS_CODE = {200, 204}
 TWITTER_CLI = None
-gif_list = [
-    "https://i.imgur.com/cD9zcNa.mp4",
-    "https://i.imgur.com/rMGBqDw.mp4",
-    "https://i.imgur.com/0qMjkp0.mp4",
-    "https://i.imgur.com/1btGCc8.mp4",
-    "https://i.imgur.com/3owYjoS.mp4",
-]
-cmd_table = {
-    "help": "Output this help message",
-    "set_avatar <url_link>": "Change webhook avatar",
-    "set_name <name>": "Change webhook name",
-    "get_avatar": "Get current webhook avatar",
-    "get_name": "Get current webhook name ",
-}
+
 
 # Set bot info
 BOT_NAME = ""
@@ -156,11 +144,11 @@ class DiscordClient(discord.Client):
             help_msg.add_field(name="#%s" % cmd_name, value=cmd_desc, inline=False)
 
         display_thumb = gif_list[random.randint(0, len(gif_list) - 1)]
-        help_msg.set_thumbnail(url=display_thumb[:-3] + "gifv")
+        help_msg.set_thumbnail(url=display_thumb)
         await channel.send(embed=help_msg)
 
     async def fun(self, channel):
-        await channel.send(gif_list[random.randint(0, len(gif_list) - 1)][:-3])
+        await channel.send(mp4_list[random.randint(0, len(gif_list) - 1)])
 
     async def handle_dm_message(self, message):
         msg_list = message.content.split()
