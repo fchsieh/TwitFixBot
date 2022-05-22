@@ -18,11 +18,11 @@ re_status = re.compile("\\w{1,15}\\/(status|statuses)\\/\\d{2,20}")
 REQUEST_SUCCESS_CODE = {200, 204}
 TWITTER_CLI = None
 gif_list = [
-    "https://i.imgur.com/t1Iifjr.gif",
-    "https://i.imgur.com/ELiPyOi.gif",
-    "https://i.imgur.com/rlNzFXZ.gif",
-    "https://i.imgur.com/JvhprC9.gif",
-    "https://i.imgur.com/7CjTRo7.gif",
+    "https://i.imgur.com/cD9zcNa.mp4",
+    "https://i.imgur.com/rMGBqDw.mp4",
+    "https://i.imgur.com/0qMjkp0.mp4",
+    "https://i.imgur.com/1btGCc8.mp4",
+    "https://i.imgur.com/3owYjoS.mp4"
 ]
 cmd_table = {
     "help": "Output this help message",
