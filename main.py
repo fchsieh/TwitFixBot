@@ -172,7 +172,7 @@ class DiscordClient(discord.Client):
                 global WEBHOOK_AVATAR_URL
                 logging.info(
                     "User {} changed webhook avatar to {}.".format(
-                        message.author, msg_list[0]
+                        message.author, WEBHOOK_AVATAR_URL
                     )
                 )
                 WEBHOOK_AVATAR_URL = msg_list[1]
@@ -296,7 +296,7 @@ class DiscordClient(discord.Client):
 
                         # Send video url
                         # Add a block quote to align with info/footer
-                        webhook.set_content("> " + video["url"])
+                        webhook.set_content(video["url"])
                         video_url_wh = webhook.execute()
                         if video_url_wh.status_code not in REQUEST_SUCCESS_CODE:
                             logging.warning("Failed to sent video url!")
