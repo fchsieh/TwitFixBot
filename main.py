@@ -107,7 +107,7 @@ class DiscordMessage:
 class DiscordClient(discord.Client):
     async def on_ready(self):
         logging.info("Logged on as {0}!".format(self.user))
-        await self.change_presence(activity=discord.Game("くろあ"))
+        await self.change_presence(activity=discord.Game(WEBHOOK_NAME))
 
     async def get_webhook(self, message):
         channel_all_webhooks = await message.channel.webhooks()
@@ -177,6 +177,8 @@ class DiscordClient(discord.Client):
                 )
                 WEBHOOK_NAME = msg_list[1]
                 await message.channel.send("Changed webhook name to " + WEBHOOK_NAME)
+                # Change now playing
+                await self.change_presence(activity=discord.Game(WEBHOOK_NAME))
             elif cmd == "get_avatar":
                 if WEBHOOK_AVATAR_URL:
                     await message.channel.send(
