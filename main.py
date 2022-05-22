@@ -107,6 +107,7 @@ class DiscordMessage:
 class DiscordClient(discord.Client):
     async def on_ready(self):
         logging.info("Logged on as {0}!".format(self.user))
+        await self.change_presence(activity=discord.Game("くろあ"))
 
     async def get_webhook(self, message):
         channel_all_webhooks = await message.channel.webhooks()
