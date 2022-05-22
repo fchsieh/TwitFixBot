@@ -17,6 +17,20 @@ re_status = re.compile("\\w{1,15}\\/(status|statuses)\\/\\d{2,20}")
 # Set global configuration
 REQUEST_SUCCESS_CODE = {200, 204}
 TWITTER_CLI = None
+gif_list = [
+    "https://i.imgur.com/t1Iifjr.gif",
+    "https://i.imgur.com/ELiPyOi.gif",
+    "https://i.imgur.com/rlNzFXZ.gif",
+    "https://i.imgur.com/JvhprC9.gif",
+    "https://i.imgur.com/7CjTRo7.gif",
+]
+cmd_table = {
+    "help": "Output this help message",
+    "set_avatar <url_link>": "Change webhook avatar",
+    "set_name <name>": "Change webhook name",
+    "get_avatar": "Get current webhook avatar",
+    "get_name": "Get current webhook name ",
+}
 
 # Set bot info
 BOT_NAME = ""
@@ -137,28 +151,15 @@ class DiscordClient(discord.Client):
         return webhook
 
     async def print_help(self, channel):
-        help_msg = discord.Embed(title="DM me with command! #help")
-        cmd_table = {
-            "help": "Output this help message",
-            "set_avatar <url_link>": "Change webhook avatar",
-            "set_name <name>": "Change webhook name",
-            "get_avatar": "Get current webhook avatar",
-            "get_name": "Get current webhook name ",
-        }
+        help_msg = discord.Embed(title="DM me with command! #help", color=0xFFB8D1)
         for cmd_name, cmd_desc in cmd_table.items():
             help_msg.add_field(name="#%s" % cmd_name, value=cmd_desc, inline=False)
 
+        display_thumb = gif_list[random.randint(0, len(gif_list) - 1)]
+        help_msg.set_thumbnail(url=display_thumb)
         await channel.send(embed=help_msg)
 
     async def fun(self, channel):
-        await self.print_help(channel)
-        gif_list = [
-            "https://i.imgur.com/t1Iifjr.gif",
-            "https://i.imgur.com/ELiPyOi.gif",
-            "https://i.imgur.com/rlNzFXZ.gif",
-            "https://i.imgur.com/JvhprC9.gif",
-            "https://i.imgur.com/7CjTRo7.gif",
-        ]
         await channel.send(gif_list[random.randint(0, len(gif_list) - 1)])
 
     async def handle_dm_message(self, message):
@@ -169,7 +170,11 @@ class DiscordClient(discord.Client):
                 await self.print_help(message.channel)
             elif cmd == "set_avatar":
                 global WEBHOOK_AVATAR_URL
-                logging.info("Avatar has been changed.")
+                logging.info(
+                    "User {} changed webhook avatar to {}.".format(
+                        message.author, msg_list[0]
+                    )
+                )
                 WEBHOOK_AVATAR_URL = msg_list[1]
                 await message.channel.send(
                     "Changed webhook avatar to <%s>" % WEBHOOK_AVATAR_URL
@@ -177,8 +182,8 @@ class DiscordClient(discord.Client):
             elif cmd == "set_name":
                 global WEBHOOK_NAME
                 logging.info(
-                    "Webhook name has been changed from {} to {}".format(
-                        WEBHOOK_NAME, msg_list[1]
+                    "User {} changed webhook name from {} to {}".format(
+                        message.author, WEBHOOK_NAME, msg_list[1]
                     )
                 )
                 WEBHOOK_NAME = msg_list[1]
@@ -199,9 +204,11 @@ class DiscordClient(discord.Client):
                     )
                 else:
                     await message.channel.send("Current webhook name is default name")
+            else:
+                await self.fun(message.channel)
 
         else:
-            await self.fun(message.channel)
+            await self.print_help(message.channel)
 
     async def on_message(self, message):
         # check if user sends a message
