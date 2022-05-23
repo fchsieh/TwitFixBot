@@ -123,7 +123,6 @@ class Tweet:
                 self.content["Video_url"] = result["url"]
                 self.content["Thumbnail"] = result["thumbnail"]
 
-        # shorten video url
         url = self.content["Video_url"]
         short_url = requests.get(
             "http://cutt.ly/api/api.php?key={}&short={}".format(
