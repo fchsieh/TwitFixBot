@@ -3,6 +3,7 @@ import os
 import re
 from datetime import datetime
 
+import discord
 import requests
 import twitter
 import youtube_dl
@@ -26,17 +27,31 @@ class TwitterClient:
 
 
 class Tweet:
-    def __init__(self, url=None, TwitterCli=None):
+    def __init__(self, url=None, TwitterCli=None, msg_embeds_list=[]):
         self.url = url
         self.tweet = None  # tweet object from twitter api
         self.type = None  # tweet type: Image, Video, Text
         self.content = {}  # content that will be passed to DiscordMessage
+        # embeds in the current message stack, check if previous message (might not be sensitive) has no embed
+        self.msg_embeds_list = msg_embeds_list
         self.TwitterCli = TwitterCli
         self.process_tweet()
 
+    def is_in_embed_list(self):
+        for embed in self.msg_embeds_list:
+            if embed.url == self.url and embed.image.url != discord.Embed.Empty:
+                return True
+        return False
+
     def is_hidden(self):
         if self.tweet["possibly_sensitive"] is not None:
-            return self.tweet["possibly_sensitive"]
+            is_sensitive = self.tweet["possibly_sensitive"]
+            if is_sensitive and not self.is_in_embed_list():
+                return True
+            elif not is_sensitive and not self.is_in_embed_list():
+                return True
+            else:
+                return False
         else:
             return False
 

@@ -88,7 +88,6 @@ def init():
 
     # Twitter Client
     TWITTER_CLI = twitter_client.TwitterClient()
-    
 
     DISCORD_TOKEN = os.environ.get("DISCORD_CLIENT_TOKEN")
     GLOBAL_SETTINGS = GLOBAL(
