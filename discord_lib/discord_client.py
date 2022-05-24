@@ -1,12 +1,13 @@
 import asyncio
 import random
+from urllib.parse import urlparse
 
 import discord
 import requests
 from discord_webhook import DiscordWebhook
+from twitter_lib.twitter_client import *
 
-from discord_message import *
-from twitter_client import *
+from discord_lib.discord_message import *
 
 REQUEST_SUCCESS_CODE = {200, 204}
 re_status = re.compile("\\w{1,15}\\/(status|statuses)\\/\\d{2,20}")
@@ -149,9 +150,9 @@ class DiscordClient(discord.Client):
                 embeds_list.append(embed.url)  # urls that have embed, should be skipped
 
         for msg in message_list:
-            is_tweet = self.is_valid_twitter_url(msg)
-            if is_tweet is not None:
-                await self.handle_twitter_message(is_tweet, message)
+            valid_url = self.is_valid_url(msg)
+            if valid_url is not None and valid_url["Twitter"]:
+                await self.handle_twitter_message(valid_url["Twitter"], message)
             else:
                 # This is not a tweet url, skipping...
                 continue
@@ -249,6 +250,16 @@ class DiscordClient(discord.Client):
             self.LOGGER.warning("Failed to process this tweet")
             return
 
+    def is_valid_url(self, url):
+        # Return valid url or None if url is not valid
+        parsed_url = urlparse(url)
+        if not parsed_url.scheme or parsed_url.scheme not in {"http", "https"}:
+            return None
+
+        hostname = parsed_url.hostname
+        if hostname == "twitter.com":
+            return {"Twitter": self.is_valid_twitter_url(url)}
+
     def is_valid_twitter_url(self, url):
         if "twitter.com" not in url:
             # Not a valid url, skipping
@@ -259,10 +270,6 @@ class DiscordClient(discord.Client):
             twitter_url = url
             if match.start() == 0:
                 twitter_url = "https://twitter.com/" + url
-            # try to request this url and check whether it is a valid tweet
-            if not url.startswith("https://twitter.com"):
-                # not a valied tweet! (status found, but might not be a twitter url)
-                return None
             status_code = requests.get(twitter_url)
             if status_code not in REQUEST_SUCCESS_CODE:
                 return twitter_url

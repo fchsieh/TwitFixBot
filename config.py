@@ -4,8 +4,8 @@ from logging.handlers import RotatingFileHandler
 
 from dotenv import load_dotenv
 
-import discord_client
-import twitter_client
+import discord_lib.discord_client as discord_client
+import twitter_lib.twitter_client as twitter_client
 
 AVATAR_IMG = "./avatar.jpg"  # default image for webhook
 LOG_NAME = "twitfix.log"
@@ -58,8 +58,9 @@ class GLOBAL:
         self.gif_list = gif_list
         self.cmd_table = cmd_table
 
-        # Client
+        # Clients
         self.TWITTER_CLI = TWITTER_CLI
+
         self.DISCORD_TOKEN = DISCORD_TOKEN
         self.DISCORD_CLI = DISCORD_CLI
 
@@ -84,10 +85,12 @@ def init():
     WEBHOOK_NAME = os.environ.get("WEBHOOK_NAME")
     fp = open(AVATAR_IMG, "rb")
     WEBHOOK_AVATAR = fp.read()
+
+    # Twitter Client
     TWITTER_CLI = twitter_client.TwitterClient()
+    
 
     DISCORD_TOKEN = os.environ.get("DISCORD_CLIENT_TOKEN")
-
     GLOBAL_SETTINGS = GLOBAL(
         LOGGER=LOGGER,
         BOT_NAME=BOT_NAME,
@@ -100,6 +103,7 @@ def init():
         DISCORD_TOKEN=DISCORD_TOKEN,
     )
 
+    # Discord Client
     DISCORD_CLI = discord_client.DiscordClient(GLOBAL_SETTINGS)
 
     return GLOBAL_SETTINGS, DISCORD_CLI
