@@ -180,7 +180,7 @@ class DiscordClient(discord.Client):
 
             elif tweet.type == "Video":
                 if not tweet.is_hidden():
-                    self.LOGGER.info("This video/gif not hidden... Skipping")
+                    self.LOGGER.info("This video/gif is not hidden... Skipping")
                     # no need to post this video/gif
                     return
                 self.LOGGER.info("Hidden video/gif found... Start processing")

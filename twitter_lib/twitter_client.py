@@ -39,8 +39,14 @@ class Tweet:
 
     def is_in_embed_list(self):
         for embed in self.msg_embeds_list:
-            if embed.url == self.url and embed.image.url != discord.Embed.Empty:
-                return True
+            if embed.url == self.url:
+                if self.type == "Image" and embed.image.url != discord.Embed.Empty:
+                    return True
+                elif self.type == "Video" and embed.video.url != discord.Embed.Empty:
+                    return True
+                else:
+                    # Found embed, but no image/video inside
+                    return False
         return False
 
     def is_hidden(self):
