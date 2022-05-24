@@ -88,35 +88,39 @@ class DiscordClient(discord.Client):
                 )
                 self.WEBHOOK_AVATAR_URL = msg_list[1]
                 await message.channel.send(
-                    "Changed webhook avatar to <%s>" % self.WEBHOOK_AVATAR_URL
+                    "> Changed webhook avatar to <%s>" % self.WEBHOOK_AVATAR_URL
                 )
             elif cmd == "set_name":
-                global WEBHOOK_NAME
                 self.LOGGER.info(
                     "User {} changed webhook name from {} to {}".format(
-                        message.author, WEBHOOK_NAME, msg_list[1]
+                        message.author, self.WEBHOOK_NAME, msg_list[1]
                     )
                 )
-                WEBHOOK_NAME = msg_list[1]
-                await message.channel.send("Changed webhook name to " + WEBHOOK_NAME)
+                self.WEBHOOK_NAME = msg_list[1]
+                await message.channel.send(
+                    "> Changed webhook name to " + self.WEBHOOK_NAME
+                )
                 # Change now playing
-                await self.change_presence(activity=discord.Game(WEBHOOK_NAME))
+                await self.change_presence(activity=discord.Game(self.WEBHOOK_NAME))
             elif cmd == "get_avatar":
                 if self.WEBHOOK_AVATAR_URL:
                     await message.channel.send(
-                        "Current webhook avatar is " + self.WEBHOOK_AVATAR_URL
+                        "> Current webhook avatar is " + self.WEBHOOK_AVATAR_URL
                     )
                 else:
                     await message.channel.send(
-                        "Current webhook avatar is default image"
+                        "> Current webhook avatar is default image"
                     )
             elif cmd == "get_name":
-                if WEBHOOK_NAME:
+                if self.WEBHOOK_NAME:
                     await message.channel.send(
-                        "Current webhook name is " + WEBHOOK_NAME
+                        "> Current webhook name is " + self.WEBHOOK_NAME
                     )
                 else:
-                    await message.channel.send("Current webhook name is default name")
+                    # using default webhook name
+                    await message.channel.send(
+                        "> Current webhook name is " + self.BOT_NAME
+                    )
             else:
                 await self.fun(message.channel)
 
