@@ -10,7 +10,7 @@ class DiscordMessage:
             "url": None,
             "thumbnail": None,
         }
-        self.discord_colors = {"Twitter": 1942002}
+        self.discord_colors = {"Twitter": 0x1DA1F2}
         self.build_message()
 
     def twitter_embed_block(self, isBase=False):

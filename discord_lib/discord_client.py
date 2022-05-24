@@ -172,7 +172,7 @@ class DiscordClient(discord.Client):
         if tweet is not None:  # A valid message found!
             if tweet.type == "Image":
                 if not tweet.is_hidden():
-                    self.LOGGER.info("This is not a hidden tweet... Skipping")
+                    self.LOGGER.info("This image is not hidden... Skipping")
                     # no need to post this image
                     return
                 self.LOGGER.info("Hidden image found... Start processing")
@@ -180,7 +180,7 @@ class DiscordClient(discord.Client):
 
             elif tweet.type == "Video":
                 if not tweet.is_hidden():
-                    self.LOGGER.info("This is not a hidden tweet... Skipping")
+                    self.LOGGER.info("This video/gif not hidden... Skipping")
                     # no need to post this video/gif
                     return
                 self.LOGGER.info("Hidden video/gif found... Start processing")
