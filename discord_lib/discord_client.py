@@ -186,6 +186,7 @@ class DiscordClient(discord.Client):
                 tweet.download_video()
 
             elif tweet.type == "Text":
+                self.LOGGER.info("Text tweet found... Skipping")
                 return  # not implemented yet
 
             else:

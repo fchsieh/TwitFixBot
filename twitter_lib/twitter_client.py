@@ -56,7 +56,10 @@ class Tweet:
     def is_hidden(self):
         if self.tweet is None:
             return False
-        if self.tweet["possibly_sensitive"] is not None:
+        if (
+            "possibly_sensitive" in self.tweet.keys()
+            and self.tweet["possibly_sensitive"] is not None
+        ):
             is_sensitive = self.tweet["possibly_sensitive"]
             is_in_embed_list = self.is_in_embed_list()
             if is_sensitive and not is_in_embed_list:
@@ -67,8 +70,7 @@ class Tweet:
                 return True
             """
             return False
-        else:
-            return False
+        return False
 
     def preprocess_tweet(self):
         twid = int(re.sub(r"\?.*$", "", self.url.rsplit("/", 1)[-1]))
