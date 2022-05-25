@@ -27,18 +27,22 @@ class TwitterClient:
 
 
 class Tweet:
-    def __init__(self, url=None, TwitterCli=None, msg_embeds_list=[]):
+    def __init__(self, url=None, TwitterCli=None, LOGGER=None, message=None):
         self.url = url
         self.tweet = None  # tweet object from twitter api
         self.type = None  # tweet type: Image, Video, Text
         self.content = {}  # content that will be passed to DiscordMessage
-        # embeds in the current message stack, check if previous message (might not be sensitive) has no embed
-        self.msg_embeds_list = msg_embeds_list
+        self.LOGGER = LOGGER  # Used for printing debug message
+        # check embeds in the current message stack whether previous message (might not be sensitive) has no embed
+        self.message = message
         self.TwitterCli = TwitterCli
-        self.process_tweet()
+        self.preprocess_tweet()
 
     def is_in_embed_list(self):
-        for embed in self.msg_embeds_list:
+        if self.message is None or self.message.embeds is None:
+            # No embeds in the current message stack
+            return False
+        for embed in self.message.embeds:
             if embed.url == self.url:
                 if self.type == "Image" and embed.image.url != discord.Embed.Empty:
                     return True
@@ -52,15 +56,19 @@ class Tweet:
     def is_hidden(self):
         if self.tweet["possibly_sensitive"] is not None:
             is_sensitive = self.tweet["possibly_sensitive"]
-            if is_sensitive and not self.is_in_embed_list():
+            is_in_embed_list = self.is_in_embed_list()
+            if is_sensitive and not is_in_embed_list:
+                self.LOGGER.info("Possibly sensitive image found...")
                 return True
-            if not is_sensitive and not self.is_in_embed_list():
+            """
+            if not is_sensitive and not is_in_embed_list:
                 return True
+            """
             return False
         else:
             return False
 
-    def process_tweet(self):
+    def preprocess_tweet(self):
         twid = int(re.sub(r"\?.*$", "", self.url.rsplit("/", 1)[-1]))
         try:
             self.tweet = self.TwitterCli.twitter_api.statuses.show(
@@ -71,9 +79,9 @@ class Tweet:
             self.tweet = None
 
         if self.tweet is not None:
-            self.tweet_type()
+            self.set_tweet_type()
 
-    def tweet_type(self):
+    def set_tweet_type(self):
         if "extended_entities" in self.tweet:
             if "video_info" in self.tweet["extended_entities"]["media"][0]:
                 self.type = "Video"

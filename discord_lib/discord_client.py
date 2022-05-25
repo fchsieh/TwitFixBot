@@ -148,30 +148,29 @@ class DiscordClient(discord.Client):
             self.LOGGER.info("Spoiler message, skipping")
             return
 
-        embeds_list = []
-        if message.embeds:
-            for embed in message.embeds:
-                embeds_list.append(embed)  # urls that have embed, should be skipped
-
         for msg in message_list:
             valid_url = self.is_valid_url(msg)
             if valid_url is not None and valid_url["Twitter"]:
-                await self.handle_twitter_message(
-                    valid_url["Twitter"], message, embeds_list
-                )
+                await self.handle_twitter_message(valid_url["Twitter"], message)
             else:
                 # This is not a tweet url, skipping...
                 continue
 
-    async def handle_twitter_message(self, is_tweet, message, msg_embeds_list):
+    async def handle_twitter_message(self, is_tweet, message):
         # Valid tweet found
         twitter_url = is_tweet
         self.LOGGER.info("Tweet Found: {}".format(twitter_url))
         # Try to fetch tweet object
-        tweet = Tweet(twitter_url, self.TWITTER_CLI, msg_embeds_list)
+        tweet = Tweet(
+            url=twitter_url,
+            TwitterCli=self.TWITTER_CLI,
+            LOGGER=self.LOGGER,
+            message=message,
+        )
         if tweet is not None:  # A valid message found!
+            is_hidden = tweet.is_hidden()
             if tweet.type == "Image":
-                if not tweet.is_hidden():
+                if not is_hidden:
                     self.LOGGER.info("This image is not hidden... Skipping")
                     # no need to post this image
                     return
@@ -179,7 +178,7 @@ class DiscordClient(discord.Client):
                 tweet.download_image()
 
             elif tweet.type == "Video":
-                if not tweet.is_hidden():
+                if not is_hidden:
                     self.LOGGER.info("This video/gif is not hidden... Skipping")
                     # no need to post this video/gif
                     return
