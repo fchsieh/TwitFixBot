@@ -54,6 +54,8 @@ class Tweet:
         return False
 
     def is_hidden(self):
+        if self.tweet is None:
+            return False
         if self.tweet["possibly_sensitive"] is not None:
             is_sensitive = self.tweet["possibly_sensitive"]
             is_in_embed_list = self.is_in_embed_list()
