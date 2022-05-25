@@ -42,11 +42,11 @@ class Tweet:
             if embed.url == self.url:
                 if self.type == "Image" and embed.image.url != discord.Embed.Empty:
                     return True
-                elif self.type == "Video" and embed.video.url != discord.Embed.Empty:
+                if self.type == "Video" and embed.video.url != discord.Embed.Empty:
                     return True
-                else:
-                    # Found embed, but no image/video inside
-                    return False
+                # Found embed, but no image/video inside
+                return False
+        # this tweet is not in embed list
         return False
 
     def is_hidden(self):
@@ -54,10 +54,9 @@ class Tweet:
             is_sensitive = self.tweet["possibly_sensitive"]
             if is_sensitive and not self.is_in_embed_list():
                 return True
-            elif not is_sensitive and not self.is_in_embed_list():
+            if not is_sensitive and not self.is_in_embed_list():
                 return True
-            else:
-                return False
+            return False
         else:
             return False
 
