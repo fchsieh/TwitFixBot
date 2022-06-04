@@ -65,10 +65,6 @@ class Tweet:
             if is_sensitive and not is_in_embed_list:
                 self.LOGGER.info("Possibly sensitive image found...")
                 return True
-            """
-            if not is_sensitive and not is_in_embed_list:
-                return True
-            """
             return False
         return False
 

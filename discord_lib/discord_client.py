@@ -53,11 +53,14 @@ class DiscordClient(discord.Client):
             self.LOGGER.error("Failed to fetch webhook")
             return
 
+        author = message.author
+        author_avatar = str(author.avatar_url)
+        author_display_name = author.display_name
         webhook = DiscordWebhook(
             url=webhook_url,
             rate_limit_retry=True,
-            username=self.WEBHOOK_NAME,
-            avatar_url=self.WEBHOOK_AVATAR_URL if self.WEBHOOK_AVATAR_URL else None,
+            username=author_display_name,
+            avatar_url=author_avatar if author_avatar else self.WEBHOOK_AVATAR_URL,
         )
 
         return webhook
@@ -148,15 +151,40 @@ class DiscordClient(discord.Client):
             self.LOGGER.info("Spoiler message, skipping")
             return
 
+        normal_message = []
+        msg_should_del = False
         for msg in message_list:
             valid_url = self.is_valid_url(msg)
             if valid_url is not None and valid_url["Twitter"]:
-                await self.handle_twitter_message(valid_url["Twitter"], message)
+                # A valid tweet found, should delete the original message
+                if not msg_should_del:
+                    msg_should_del = True
+                await self.handle_twitter_message(
+                    valid_url["Twitter"], message, normal_message
+                )
             else:
-                # This is not a tweet url, skipping...
+                # Not a valid twitter url, skipping
+                normal_message.append(msg)
                 continue
+        # Other messages that was deleted by the bot, but should be displayed
+        if msg_should_del:
+            await message.delete()
+            for msg in normal_message:
+                await self.handle_normal_message(message, msg)
 
-    async def handle_twitter_message(self, is_tweet, message):
+    async def handle_normal_message(self, message, normal_message):
+        webhook = await self.get_webhook(message)
+        if webhook is None:
+            return
+
+        webhook.set_content(normal_message)
+        wh = webhook.execute()
+        if wh.status_code not in REQUEST_SUCCESS_CODE:
+            self.LOGGER.warning("Failed to sent message webhook!")
+        else:
+            self.LOGGER.info("Successfully sent message to channel")
+
+    async def handle_twitter_message(self, is_tweet, message, normal_message):
         # Valid tweet found
         twitter_url = is_tweet
         self.LOGGER.info("Tweet Found: {}".format(twitter_url))
@@ -167,36 +195,48 @@ class DiscordClient(discord.Client):
             LOGGER=self.LOGGER,
             message=message,
         )
-        if tweet is not None:  # A valid message found!
+        if tweet is not None:  # A valid tweet found!
             is_hidden = tweet.is_hidden()
             if tweet.type == "Image":
                 if not is_hidden:
-                    self.LOGGER.info("This image is not hidden... Skipping")
+                    self.LOGGER.info(
+                        "This image is not hidden... Adding to normal message list"
+                    )
                     # no need to post this image
+                    normal_message.append(tweet.url)
                     return
                 self.LOGGER.info("Hidden image found... Start processing")
                 tweet.download_image()
 
             elif tweet.type == "Video":
                 if not is_hidden:
-                    self.LOGGER.info("This video/gif is not hidden... Skipping")
+                    self.LOGGER.info(
+                        "This video/gif is not hidden... Adding to normal message list"
+                    )
                     # no need to post this video/gif
+                    normal_message.append(tweet.url)
                     return
                 self.LOGGER.info("Hidden video/gif found... Start processing")
                 tweet.download_video()
 
             elif tweet.type == "Text":
-                self.LOGGER.info("Text tweet found... Skipping")
-                return  # not implemented yet
+                self.LOGGER.info("Text tweet found... Adding to normal message list")
+                normal_message.append(tweet.url)
+                return  # Text tweet, save in normal message list
 
             else:
-                self.LOGGER.warning("Failed to process, not a valid tweet?")
-                return  # not implemented yet
+                self.LOGGER.warning(
+                    "Failed to process, not a valid tweet? Adding to normal message list"
+                )
+                normal_message.append(tweet.url)
+                return  # Other types of tweet
 
             # Build tweet info (author, date, url...)
             tweet.fetch_info()
             # get webhook to post this tweet
             webhook = await self.get_webhook(message)
+            # post url first
+            webhook.set_content(tweet.url)
 
             tweet_output = tweet.output()
 
@@ -228,33 +268,10 @@ class DiscordClient(discord.Client):
             else:
                 self.LOGGER.info("Successfully sent message to channel")
 
-            # Check if this message has embed again (if true, delete the sent webhook)
-            if tweet.type == "Image":
-                await asyncio.sleep(2)
-                if message.embeds:
-                    embed_table = dict(
-                        [(embed.url, embed.image) for embed in message.embeds]
-                    )
-
-                    if (
-                        tweet.url in embed_table
-                        and embed_table[tweet.url].url != discord.Embed.Empty
-                    ):
-                        # Check if message embed contains image
-                        # delete latest image from bot
-                        self.LOGGER.info(
-                            "Deleting sent webhook, previous message has embed (should"
-                            " not be sent)"
-                        )
-                        webhook.delete(sent_webhook)
-
-                    else:
-                        # no duplicate embed image found, continue...
-                        return
-
         else:
-            # Not a valid tweet
-            self.LOGGER.warning("Failed to process this tweet")
+            # Not a valid tweet, append to normal message list
+            self.LOGGER.warning("Not a valid tweet, skipping")
+            normal_message.append(tweet.url)
             return
 
     def is_valid_url(self, url):
