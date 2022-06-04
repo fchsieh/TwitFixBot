@@ -146,7 +146,11 @@ class DiscordClient(discord.Client):
             return
 
         message_list = message.content.split()
-        if message.content.startswith("||") and message.content.endswith("||"):
+        if (
+            message.content.startswith("||")
+            and message.content.endswith("||")
+            and len(message_list) == 1
+        ):
             # this is a spoiler message, skip
             self.LOGGER.info("Spoiler message, skipping")
             return
@@ -159,6 +163,7 @@ class DiscordClient(discord.Client):
                 # A valid tweet found, should delete the original message
                 if not msg_should_del:
                     msg_should_del = True
+                    await message.delete()
                 await self.handle_twitter_message(
                     valid_url["Twitter"], message, normal_message
                 )
@@ -168,7 +173,6 @@ class DiscordClient(discord.Client):
                 continue
         # Other messages that was deleted by the bot, but should be displayed
         if msg_should_del:
-            await message.delete()
             for msg in normal_message:
                 await self.handle_normal_message(message, msg)
 
