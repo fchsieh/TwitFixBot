@@ -163,7 +163,6 @@ class DiscordClient(discord.Client):
                 # A valid tweet found, should delete the original message
                 if not msg_should_del:
                     msg_should_del = True
-                    await message.delete()
                 await self.handle_twitter_message(
                     valid_url["Twitter"], message, normal_message
                 )
@@ -173,6 +172,10 @@ class DiscordClient(discord.Client):
                 continue
         # Other messages that was deleted by the bot, but should be displayed
         if msg_should_del:
+            await message.delete()
+            self.LOGGER.info(
+                "Tweet message from user {} has been deleted".format(message.author)
+            )
             for msg in normal_message:
                 await self.handle_normal_message(message, msg)
 
