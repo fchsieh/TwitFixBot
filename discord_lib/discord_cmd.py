@@ -12,25 +12,28 @@ async def handle_cmd(Bot, msg_list, message):
 
         elif cmd == "set_avatar":
             Bot.LOGGER.info(
-                "User {} changed webhook avatar to {}.".format(
+                "User {} changed anonymous user's avatar to: {}".format(
                     message.author, msg_list[1]
                 )
             )
             Bot.WEBHOOK_AVATAR_URL = msg_list[1]
             await message.channel.send(
-                "> Changed webhook avatar to <%s>" % Bot.WEBHOOK_AVATAR_URL
+                "> Changed anonymous user's avatar to: <%s>" % Bot.WEBHOOK_AVATAR_URL
             )
 
         elif cmd == "set_name":
             Bot.LOGGER.info(
-                "User {} changed webhook name from {} to {}".format(
+                "User {} changed anonymous user's name from {} to {}".format(
                     message.author, Bot.WEBHOOK_NAME, msg_list[1]
                 )
             )
             Bot.WEBHOOK_NAME = msg_list[1]
-            await message.channel.send("> Changed webhook name to " + Bot.WEBHOOK_NAME)
+            await message.channel.send(
+                "> Changed anonymous user's name to " + Bot.WEBHOOK_NAME
+            )
             # Change now playing
-            await Bot.change_presence(activity=discord.Game(Bot.WEBHOOK_NAME))
+            now_playing = "{} | #help".format(Bot.WEBHOOK_NAME)
+            await Bot.change_presence(activity=discord.Game(now_playing))
 
         elif cmd == "get_avatar":
             if Bot.WEBHOOK_AVATAR_URL:
@@ -38,16 +41,20 @@ async def handle_cmd(Bot, msg_list, message):
                     "> Current webhook avatar is " + Bot.WEBHOOK_AVATAR_URL
                 )
             else:
-                await message.channel.send("> Current webhook avatar is default image")
+                await message.channel.send(
+                    "> Current anonymous user's avatar is: default image"
+                )
 
         elif cmd == "get_name":
             if Bot.WEBHOOK_NAME:
                 await message.channel.send(
-                    "> Current webhook name is " + Bot.WEBHOOK_NAME
+                    "> Current anonymous user's name is: " + Bot.WEBHOOK_NAME
                 )
             else:
                 # using default webhook name
-                await message.channel.send("> Current webhook name is " + Bot.BOT_NAME)
+                await message.channel.send(
+                    "> Current anonymous user's name is: " + Bot.BOT_NAME
+                )
 
         elif cmd == "bind":
             if len(msg_list) != 3:

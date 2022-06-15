@@ -30,7 +30,9 @@ class DiscordClient(discord.Client):
 
     async def on_ready(self):
         self.LOGGER.info("Logged on as {0}!".format(self.user))
-        await self.change_presence(activity=discord.Game(self.WEBHOOK_NAME))
+        # Change now playing
+        now_playing = "{} | #help".format(self.WEBHOOK_NAME)
+        await self.change_presence(activity=discord.Game(now_playing))
 
     async def get_webhook(self, message):
         channel_all_webhooks = await message.channel.webhooks()
