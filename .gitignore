@@ -131,3 +131,6 @@ dmypy.json
 .env
 .devcontainer
 .vscode
+
+# database
+.cache.json

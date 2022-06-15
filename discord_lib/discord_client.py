@@ -1,4 +1,3 @@
-import asyncio
 import random
 from urllib.parse import urlparse
 
@@ -8,6 +7,7 @@ from discord_webhook import DiscordWebhook
 from twitter_lib.twitter_client import *
 
 from discord_lib.discord_message import *
+from discord_lib.discord_cmd import *
 
 REQUEST_SUCCESS_CODE = {200, 204}
 re_status = re.compile("\\w{1,15}\\/(status|statuses)\\/\\d{2,20}")
@@ -80,55 +80,9 @@ class DiscordClient(discord.Client):
     async def handle_dm_message(self, message):
         msg_list = message.content.split()
         if msg_list[0].startswith("#"):
-            cmd = msg_list[0][1:]
-            if cmd == "help":
-                await self.print_help(message.channel)
-            elif cmd == "set_avatar":
-                self.LOGGER.info(
-                    "User {} changed webhook avatar to {}.".format(
-                        message.author, msg_list[1]
-                    )
-                )
-                self.WEBHOOK_AVATAR_URL = msg_list[1]
-                await message.channel.send(
-                    "> Changed webhook avatar to <%s>" % self.WEBHOOK_AVATAR_URL
-                )
-            elif cmd == "set_name":
-                self.LOGGER.info(
-                    "User {} changed webhook name from {} to {}".format(
-                        message.author, self.WEBHOOK_NAME, msg_list[1]
-                    )
-                )
-                self.WEBHOOK_NAME = msg_list[1]
-                await message.channel.send(
-                    "> Changed webhook name to " + self.WEBHOOK_NAME
-                )
-                # Change now playing
-                await self.change_presence(activity=discord.Game(self.WEBHOOK_NAME))
-            elif cmd == "get_avatar":
-                if self.WEBHOOK_AVATAR_URL:
-                    await message.channel.send(
-                        "> Current webhook avatar is " + self.WEBHOOK_AVATAR_URL
-                    )
-                else:
-                    await message.channel.send(
-                        "> Current webhook avatar is default image"
-                    )
-            elif cmd == "get_name":
-                if self.WEBHOOK_NAME:
-                    await message.channel.send(
-                        "> Current webhook name is " + self.WEBHOOK_NAME
-                    )
-                else:
-                    # using default webhook name
-                    await message.channel.send(
-                        "> Current webhook name is " + self.BOT_NAME
-                    )
-            else:
-                await self.fun(message.channel)
-
+            await handle_cmd(self, msg_list, message)
         else:
-            await self.print_help(message.channel)
+            await anonymous_message(self, msg_list, message)
 
     async def on_message(self, message):
         # check if user sends a message
@@ -179,10 +133,11 @@ class DiscordClient(discord.Client):
             for msg in normal_message:
                 await self.handle_normal_message(message, msg)
 
-    async def handle_normal_message(self, message, normal_message):
-        webhook = await self.get_webhook(message)
+    async def handle_normal_message(self, message, normal_message, webhook=None):
         if webhook is None:
-            return
+            webhook = await self.get_webhook(message)
+        # clear previous embed if any
+        webhook.remove_embeds()
 
         webhook.set_content(normal_message)
         wh = webhook.execute()
@@ -191,7 +146,9 @@ class DiscordClient(discord.Client):
         else:
             self.LOGGER.info("Successfully sent message to channel")
 
-    async def handle_twitter_message(self, is_tweet, message, normal_message):
+    async def handle_twitter_message(
+        self, is_tweet, message, normal_message, webhook=None
+    ):
         # Valid tweet found
         twitter_url = is_tweet
         self.LOGGER.info("Tweet Found: {}".format(twitter_url))
@@ -241,7 +198,8 @@ class DiscordClient(discord.Client):
             # Build tweet info (author, date, url...)
             tweet.fetch_info()
             # get webhook to post this tweet
-            webhook = await self.get_webhook(message)
+            if webhook is None:
+                webhook = await self.get_webhook(message)
             # post url first
             webhook.set_content(tweet.url)
 
