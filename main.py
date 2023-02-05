@@ -1,6 +1,18 @@
-import fixbot_init
+import os
+
+from dotenv import load_dotenv
+
+from discord_client import discord_client
+from packages import config
 
 if __name__ == "__main__":
-    GLOBAL, DISCORD_CLI = fixbot_init.init()
+    load_dotenv(os.path.join(os.path.dirname(__file__), ".env"))
 
-    DISCORD_CLI.run(GLOBAL.DISCORD_TOKEN)
+    # init config
+    config.init()
+
+    app = discord_client.DiscordClient()
+    app.run(
+        os.environ.get("DISCORD_TOKEN"),
+        log_handler=None,  # suppress handler from discord.py
+    )

@@ -1,0 +1,29 @@
+{
+    "extractor": {
+        "skip": false,
+        "twitter": {
+            "username": null,
+            "password": null,
+            "unique": false,
+            "videos": true,
+            "size": "orig",
+            "text-tweets": true,
+            "retweets": "original",
+            "syndication": "extended",
+            "postprocessors": [
+                {
+                    "name": "metadata",
+                    "event": "post",
+                    "filename": "-",
+                    "indent": null
+                }
+            ]
+        }
+    },
+    "output": {
+        "mode": "null"
+    },
+    "cache": {
+        "file": "./cache.sqlite3"
+    }
+}

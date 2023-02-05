@@ -131,6 +131,7 @@ dmypy.json
 .env
 .devcontainer
 .vscode
+gallery-dl.json
 
 # database
-.cache.json
+*.sqlite3
