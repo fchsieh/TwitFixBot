@@ -103,11 +103,11 @@ class TwitterMessage:
 
     def build_message(self) -> bool:
         if self.content_dict["is_video"]:
-            self.embeds =  self.build_video_message()
+            self.embeds = self.build_video_message()
         elif self.content_dict["is_image"]:
-            self.embeds =  self.build_image_message()
+            self.embeds = self.build_image_message()
         else:  # text message
-            self.embeds =  self.build_text_message()
+            self.embeds = self.build_text_message()
 
         if self.embeds:
             return True

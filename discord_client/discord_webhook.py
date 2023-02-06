@@ -92,7 +92,9 @@ class DiscordWebhook:
             if embed.video:
                 video_url = embed.video.get("url")
                 if video_url:
-                    webhook.set_content("__{}{}__".format(DISCORD_HIDE_PREFIX, video_url))
+                    webhook.set_content(
+                        "__{}{}__".format(DISCORD_HIDE_PREFIX, video_url)
+                    )
                     sent_webhook = webhook.execute()
                     if sent_webhook.status_code not in {200, 204}:
                         self.log.error(

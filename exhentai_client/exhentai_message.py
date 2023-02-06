@@ -32,7 +32,6 @@ class ExHentaiMessage:
         embed.set_author(
             name=self.content_dict["author"],
             url=self.content_dict["author_url"],
-            icon_url=config.EXHENTAI_ICON,
         )
         # Set title
         embed.set_title(title=self.content_dict["title"])

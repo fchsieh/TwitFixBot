@@ -6,7 +6,6 @@ from gallery_dl import config, exception, job, util
 class GalleryDL(job.DataJob):
     def __init__(self, url, parent=None, file=sys.stdout):
         job.DataJob.__init__(self, url, parent)
-        
 
     def run(self):
         extractor = self.extractor
