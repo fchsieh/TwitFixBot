@@ -1,4 +1,5 @@
 import logging
+import os
 import re
 
 import discord
@@ -25,6 +26,10 @@ class DiscordClient(discord.Client):
 
     async def on_ready(self):
         self.log.info(f"Logged in as {self.user}")
+        # Set status
+        await self.change_presence(
+            activity=discord.Game(name=os.environ.get("BOT_NAME"))
+        )
 
     async def on_message(self, message: discord.Message):
         # don't respond to ourselves
