@@ -28,18 +28,21 @@ class ExHentaiClient:
             for x in doujin_metadata.get("tags", [])
             if x.startswith("artist:") or x.startswith("group:")
         ]
+        author_candidates = sorted(author_candidates)  # artist: before group:
+        is_group = False
         if len(author_candidates) > 0:
-            if author_candidates[0].startswith("group:"):
-                doujin_data["author"] = author_candidates[0].split("group:")[1]
+            if author_candidates[0].startswith("artist:"):
+                doujin_data["author"] = author_candidates[0].split("artist:")[1].title()
             else:
-                doujin_data["author"] = author_candidates[0].split("artist:")[1]
+                is_group = True
+                doujin_data["author"] = author_candidates[0].split("group:")[1].title()
         else:
             doujin_data["author"] = "Unknown"
         doujin_data["author_url"] = (
             ""
             if doujin_data["author"] == "Unknown"
-            else "https://exhentai.org/tag/artist:{}".format(
-                doujin_data["author"]
+            else "https://exhentai.org/tag/{}:{}".format(
+                "group" if is_group else "artist", doujin_data["author"]
             ).replace(" ", "+")
         )
         doujin_data["thumb"] = first_page

@@ -52,7 +52,11 @@ class ExHentaiMessage:
         )
 
         # Set footer
-        embed.set_footer(text="ExHentai.org")
+        embed.set_footer(
+            text="ExHentai",
+            icon_url=config.EXHENTAI_ICON,
+            proxy_icon_url=config.EXHENTAI_ICON,
+        )
 
         # Set timestamp
         shifted_date = self.content_dict["date"] + timedelta(
