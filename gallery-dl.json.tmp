@@ -18,12 +18,24 @@
                     "indent": null
                 }
             ]
+        },
+        "exhentai": {
+            "username": null,
+            "password": null,
+            "metadata": true,
+            "original": false,
+            "download": false,
+            "image-range": "1",
+            "postprocessors": [
+                {
+                    "name": "metadata",
+                    "event": "post",
+                    "filename": "-",
+                    "indent": null
+                }
+            ]
         }
     },
-    "output": {
-        "mode": "null"
-    },
-    "cache": {
-        "file": "./cache.sqlite3"
-    }
+    "output": { "mode": "null" },
+    "cache": { "file": "./cache.sqlite3" }
 }

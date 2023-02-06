@@ -6,5 +6,13 @@ def is_twitter_url(url):
     return all(["twitter.com" in url, "status" in url])
 
 
-def build_url(url):
-    return f"https://twitter.com/{urlparse(url).path[1:]}"
+def is_exhentai_url(url):
+    # make sure it's a gallery
+    return all([("exhentai.org" in url or "e-hentai.org" in url), "g" in url])
+
+
+def build_url(url, type):
+    if type == "twitter":
+        return f"https://twitter.com/{urlparse(url).path[1:]}"
+    elif type == "exhentai":
+        return f"https://exhentai.org/{urlparse(url).path[1:]}"

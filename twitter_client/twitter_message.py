@@ -1,18 +1,10 @@
-import datetime
 import logging
 from datetime import timedelta
 from typing import List
 
 from discord_webhook import DiscordEmbed
 
-SERVER_TIMEZONE = datetime.datetime.now(datetime.timezone.utc).astimezone().tzinfo
-TIMEZONE_OFFSET = (
-    datetime.datetime.now(datetime.timezone.utc)
-    .astimezone()
-    .utcoffset()
-    .total_seconds()
-    / 3600
-)
+from packages import config
 
 
 class TwitterMessage:
@@ -22,7 +14,7 @@ class TwitterMessage:
         self.original_message = original_message
         self.embeds = None
 
-    async def twitter_base_embed(self, is_base=False) -> DiscordEmbed:
+    def twitter_base_embed(self, is_base=False) -> DiscordEmbed:
         if not all(
             [
                 self.content_dict["tweet_url"],
@@ -67,18 +59,20 @@ class TwitterMessage:
                 icon_url="https://abs.twimg.com/icons/apple-touch-icon-192x192.png",
             )
             # Set timestamp
-            shifted_date = self.content_dict["date"] + timedelta(hours=TIMEZONE_OFFSET)
+            shifted_date = self.content_dict["date"] + timedelta(
+                hours=config.TIMEZONE_OFFSET
+            )
             embed.set_timestamp(shifted_date.timestamp())
 
         return embed
 
-    async def build_text_message(self) -> List[DiscordEmbed]:
+    def build_text_message(self) -> List[DiscordEmbed]:
         embed_list = []
-        embed = await self.twitter_base_embed(is_base=True)
+        embed = self.twitter_base_embed(is_base=True)
         embed_list.append(embed)
         return embed_list
 
-    async def build_image_message(self) -> List[DiscordEmbed]:
+    def build_image_message(self) -> List[DiscordEmbed]:
         if not self.content_dict["media"]:
             self.log.warning("No images found")
             return None
@@ -87,33 +81,33 @@ class TwitterMessage:
         image_count = len(self.content_dict["media"])
         for img in range(image_count):
             if img == 0:
-                embed = await self.twitter_base_embed(is_base=True)
+                embed = self.twitter_base_embed(is_base=True)
             else:
-                embed = await self.twitter_base_embed(is_base=False)
+                embed = self.twitter_base_embed(is_base=False)
 
             # for multiple images, discord requires a new embed for each image
             embed.set_image(url=self.content_dict["media"][img])
             embed_list.append(embed)
         return embed_list
 
-    async def build_video_message(self) -> List[DiscordEmbed]:
+    def build_video_message(self) -> List[DiscordEmbed]:
         if not self.content_dict["media"]:
             self.log.warning("No video found")
             return None
 
         embed_list = []
-        embed = await self.twitter_base_embed(is_base=True)
+        embed = self.twitter_base_embed(is_base=True)
         embed.set_video(url=self.content_dict["media"][0])
         embed_list.append(embed)
         return embed_list
 
-    async def build_message(self) -> bool:
+    def build_message(self) -> bool:
         if self.content_dict["is_video"]:
-            self.embeds = await self.build_video_message()
+            self.embeds =  self.build_video_message()
         elif self.content_dict["is_image"]:
-            self.embeds = await self.build_image_message()
+            self.embeds =  self.build_image_message()
         else:  # text message
-            self.embeds = await self.build_text_message()
+            self.embeds =  self.build_text_message()
 
         if self.embeds:
             return True
