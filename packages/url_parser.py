@@ -8,7 +8,7 @@ def is_twitter_url(url):
 
 def is_exhentai_url(url):
     # make sure it's a gallery
-    return all([("exhentai.org" in url or "e-hentai.org" in url), "g" in url])
+    return all([("exhentai.org" in url or "e-hentai.org" in url), "/g/" in url])
 
 
 def build_url(url, type):
