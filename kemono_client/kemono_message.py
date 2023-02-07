@@ -24,8 +24,8 @@ class KemonoMessage:
             # Set footer
             embed.set_footer(
                 text="Kemono.party",
-                proxy_icon_url="https://kemono.party/static/klogo.png",
-                icon_url="https://kemono.party/static/klogo.png",
+                proxy_icon_url="https://i.imgur.com/CKPoBpM.png",
+                icon_url="https://i.imgur.com/CKPoBpM.png",
             )
 
             # Set timestamp
