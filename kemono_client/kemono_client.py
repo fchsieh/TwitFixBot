@@ -26,15 +26,21 @@ class KemonoClient:
         for f in j.data[1:]:
             if len(post_data["images"]) > 4:
                 break
+            # ignore if file is not an image
+            if f[1].split(".")[-1] not in {
+                "jpg",
+                "png",
+                "jpeg",
+                "gif",
+                "jfif",
+                "webp",
+                "tiff",
+                "bmp",
+            }:
+                continue
             post_data["images"].append(f[1])
 
         # Set date
         post_data["date"] = post_metadata.get("date", None)
-
-        # Check if file count matches image count
-        if file_count <= 4 and file_count != len(post_data["images"]):
-            self.log.warning(
-                f"File count and media count do not match, file count : {file_count} media count: {len(post_data['images'])}"
-            )
 
         return post_data
