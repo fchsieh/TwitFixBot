@@ -8,7 +8,7 @@ class TwitterClient:
     def __init__(self):
         self.log = logging.getLogger("discord")
 
-    def build_tweet(self, url) -> dict:
+    def build(self, url) -> dict:
         j = GalleryDL(url)
         j.run()
 

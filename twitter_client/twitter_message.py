@@ -43,7 +43,7 @@ class TwitterMessage:
             )
             # Set content
             embed.set_description(self.content_dict["content"] or "")
-            # Set media
+            # Set media info
             if self.content_dict["likes"] > 0:
                 embed.add_embed_field(
                     name="Likes", value=self.content_dict["likes"], inline=True

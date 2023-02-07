@@ -10,6 +10,8 @@ from exhentai_client.exhentai_message import ExHentaiMessage
 from packages import url_parser
 from twitter_client import twitter_client
 from twitter_client.twitter_message import TwitterMessage
+from kemono_client import kemono_client
+from kemono_client.kemono_message import KemonoMessage
 
 intents = discord.Intents.default()
 intents.members = True
@@ -27,6 +29,7 @@ class DiscordClient(discord.Client):
         # Other clients
         self.TwitterClient = twitter_client.TwitterClient()
         self.ExHentaiClient = exhentai_client.ExHentaiClient()
+        self.KemonoClient = kemono_client.KemonoClient()
 
     async def on_ready(self):
         self.log.info(f"Logged in as {self.user}")
@@ -44,9 +47,9 @@ class DiscordClient(discord.Client):
             return
 
         if re.search(config.REGEX_URL, message.content):
-            await self.handle_url(message)
+            await self.on_url(message)
 
-    async def handle_url(self, message: discord.Message):
+    async def on_url(self, message: discord.Message):
         parsed_urls = set()
         urls = [
             x.group(0)
@@ -59,49 +62,43 @@ class DiscordClient(discord.Client):
         for idx in range(len(urls)):
             url = urls[idx]
             if url_parser.is_twitter_url(url):
-                await self._handle_twitter_url(
-                    message, message.content, url, parsed_urls, idx == 0
-                )
-            elif url_parser.is_exhentai_url(url):
-                await self._handle_exhentai_url(
+                await self._handle_url(
                     message,
                     message.content,
                     url,
                     parsed_urls,
                     idx == 0,
                     has_twitter_url,
+                    "twitter",
+                    self.TwitterClient,
+                    TwitterMessage,
+                )
+            elif url_parser.is_exhentai_url(url):
+                await self._handle_url(
+                    message,
+                    message.content,
+                    url,
+                    parsed_urls,
+                    idx == 0,
+                    has_twitter_url,
+                    "exhentai",
+                    self.ExHentaiClient,
+                    ExHentaiMessage,
+                )
+            elif url_parser.is_kemono_url(url):
+                await self._handle_url(
+                    message,
+                    message.content,
+                    url,
+                    parsed_urls,
+                    idx == 0,
+                    has_twitter_url,
+                    "kemono",
+                    self.KemonoClient,
+                    KemonoMessage,
                 )
 
-    async def _handle_twitter_url(
-        self,
-        message: discord.Message,
-        content: str,
-        url: str,
-        parsed_urls: set,
-        send_orig_msg: bool,
-    ):
-        # Start processing url
-        twitter_url = url_parser.build_url(url, "twitter")
-        # don't send duplicate tweets
-        if twitter_url in parsed_urls:
-            return
-        parsed_urls.add(twitter_url)
-        # Build tweet message
-        tweet = self.TwitterClient.build_tweet(twitter_url)
-        tweet_message = TwitterMessage(tweet, content)
-        # Send tweet to discord channel
-        if tweet_message.build_message():
-            self.log.info(f"Sending tweet: '{twitter_url}'")
-            await self.WebhookClient.execute_webhook(
-                original_message=content
-                if send_orig_msg
-                else "",  # only send original message once
-                message=message,
-                channel=message.channel,
-                embeds=tweet_message.embeds,
-            )
-
-    async def _handle_exhentai_url(
+    async def _handle_url(
         self,
         message: discord.Message,
         content: str,
@@ -109,26 +106,27 @@ class DiscordClient(discord.Client):
         parsed_urls: set,
         send_orig_msg: bool,
         has_twitter_url: bool,
+        type: str,
+        client: object,
+        message_class: object,
     ):
-        # For exhentai urls, don't delete original message
-
         # Start processing url
-        exhentai_url = url_parser.build_url(url, "exhentai")
-        # don't send duplicate doujins
-        if exhentai_url in parsed_urls:
+        url = url_parser.build_url(url, type)
+        # don't send duplicate tweets
+        if url in parsed_urls:
             return
-        parsed_urls.add(exhentai_url)
-        # Build doujin info
-        doujin = self.ExHentaiClient.build_doujin(exhentai_url)
-        doujin_message = ExHentaiMessage(doujin, message.content)
-        # Send doujin to discord channel
-        if doujin_message.build_message():
-            self.log.info(f"Sending doujin: '{exhentai_url}'")
+        parsed_urls.add(url)
+        # Build message
+        content_data = client.build(url)
+        to_send = message_class(content_data, content)
+        # Send to discord channel
+        if to_send.build_message():
+            self.log.info(f"Sending {type}: '{url}'")
             await self.WebhookClient.execute_webhook(
                 original_message=content
                 if send_orig_msg and has_twitter_url
                 else "",  # only send original message once
                 message=message,
                 channel=message.channel,
-                embeds=doujin_message.embeds,
+                embeds=to_send.embeds,
             )
