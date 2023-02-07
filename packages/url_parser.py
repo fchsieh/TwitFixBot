@@ -12,8 +12,13 @@ def is_exhentai_url(url):
 
 
 def is_kemono_url(url):
-    # make sure it's a gallery
+    # make sure it's a post
     return all(["kemono.party" in url, "/post/" in url])
+
+
+def is_pixiv_url(url):
+    # make sure it's a post
+    return all(["pixiv.net" in url, "/artworks/" in url])
 
 
 def build_url(url, type):
@@ -23,3 +28,5 @@ def build_url(url, type):
         return f"https://exhentai.org/{urlparse(url).path[1:]}"
     elif type == "kemono":
         return f"https://kemono.party/{urlparse(url).path[1:]}"
+    elif type == "pixiv":
+        return f"https://pixiv.net/{urlparse(url).path[1:]}"

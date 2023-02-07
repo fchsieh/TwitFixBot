@@ -12,6 +12,8 @@ from twitter_client import twitter_client
 from twitter_client.twitter_message import TwitterMessage
 from kemono_client import kemono_client
 from kemono_client.kemono_message import KemonoMessage
+from pixiv_client import pixiv_client
+from pixiv_client.pixiv_message import PixivMessage
 
 intents = discord.Intents.default()
 intents.members = True
@@ -30,6 +32,7 @@ class DiscordClient(discord.Client):
         self.TwitterClient = twitter_client.TwitterClient()
         self.ExHentaiClient = exhentai_client.ExHentaiClient()
         self.KemonoClient = kemono_client.KemonoClient()
+        self.PixivClient = pixiv_client.PixivClient()
 
     async def on_ready(self):
         self.log.info(f"Logged in as {self.user}")
@@ -97,6 +100,18 @@ class DiscordClient(discord.Client):
                     self.KemonoClient,
                     KemonoMessage,
                 )
+            elif url_parser.is_pixiv_url(url):
+                await self._handle_url(
+                    message,
+                    message.content,
+                    url,
+                    parsed_urls,
+                    idx == 0,
+                    has_twitter_url,
+                    "pixiv",
+                    self.PixivClient,
+                    PixivMessage,
+                )
 
     async def _handle_url(
         self,
@@ -118,6 +133,9 @@ class DiscordClient(discord.Client):
         parsed_urls.add(url)
         # Build message
         content_data = client.build(url)
+        if not content_data:
+            self.log.info(f"Failed to build {type} message: '{url}'")
+            return
         to_send = message_class(content_data, content)
         # Send to discord channel
         if to_send.build_message():

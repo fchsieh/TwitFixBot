@@ -18,9 +18,6 @@ class KemonoClient:
         # Set post url
         post_data["post_url"] = url
 
-        # Get file count
-        file_count = post_metadata.get("count", 0)
-
         # Set images at most 4
         post_data["images"] = []
         for f in j.data[1:]:

@@ -37,8 +37,16 @@
         },
         "kemonoparty": {
             "image-range": "1-4"
+        },
+        "pixiv": {
+            "metadata": true,
+            "image-range": "1-4"
         }
     },
-    "output": { "mode": "null" },
-    "cache": { "file": "./cache.sqlite3" }
+    "output": {
+        "mode": "null"
+    },
+    "cache": {
+        "file": "./cache.sqlite3"
+    }
 }
