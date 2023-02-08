@@ -1,9 +1,6 @@
 import logging
-from datetime import timedelta
 
 from discord_webhook import DiscordEmbed
-
-from packages import config
 
 
 class PixivMessage:
@@ -21,6 +18,10 @@ class PixivMessage:
         embed = DiscordEmbed(url=self.content_dict["post_url"])
         if is_base:
             embed.set_color(0x009CFF)
+
+            # Set title
+            embed.set_title(title=self.content_dict["title"])
+
             # Set footer
             embed.set_footer(
                 text="Pixiv",
@@ -28,11 +29,7 @@ class PixivMessage:
                 icon_url="https://i.imgur.com/A6jDxs3.png",
             )
 
-            # Set timestamp
-            shifted_date = self.content_dict["date"] + timedelta(
-                hours=config.TIMEZONE_OFFSET
-            )
-            embed.set_timestamp(shifted_date.timestamp())
+            embed.set_timestamp(self.content_dict["date"].timestamp())
 
         return embed
 

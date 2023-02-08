@@ -18,6 +18,10 @@ class KemonoMessage:
         embed = DiscordEmbed(url=self.content_dict["post_url"])
         if is_base:
             embed.set_color(0xE7702F)
+
+            # Set title
+            embed.set_title(title=self.content_dict["title"])
+
             # Set footer
             embed.set_footer(
                 text="Kemono.party",

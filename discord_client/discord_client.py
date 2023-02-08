@@ -139,7 +139,7 @@ class DiscordClient(discord.Client):
         to_send = message_class(content_data, content)
         # Send to discord channel
         if to_send.build_message():
-            self.log.info(f"Sending {type}: '{url}'")
+            self.log.info(f"Sending '{type}': {url}")
             await self.WebhookClient.execute_webhook(
                 original_message=content
                 if send_orig_msg and has_twitter_url
