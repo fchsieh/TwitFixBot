@@ -34,7 +34,7 @@ class PixivClient:
         post_data = defaultdict(lambda: None)
 
         # Check if post is not image
-        if post_metadata["illustType"] != 0:
+        if post_metadata["illustType"] == 2:
             return None
 
         # Check if post is non-nsfw
