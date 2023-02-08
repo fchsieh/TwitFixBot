@@ -36,9 +36,6 @@
             ]
         },
         "kemonoparty": {
-            "image-range": "1-4"
-        },
-        "pixiv": {
             "metadata": true,
             "image-range": "1-4"
         }

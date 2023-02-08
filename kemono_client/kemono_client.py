@@ -19,7 +19,10 @@ class KemonoClient:
         post_data["post_url"] = url
 
         # Set title
-        post_data["title"] = post_metadata.get("title", None)
+        title = post_metadata.get("title", "Untitled")
+        username = post_metadata.get("username", "Unknown")
+        service = post_metadata.get("service", "Unknown").title()
+        post_data["title"] = f'"{title}" by {username} from {service}'
 
         # Set images at most 4
         post_data["images"] = []

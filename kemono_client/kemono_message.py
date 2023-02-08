@@ -24,7 +24,7 @@ class KemonoMessage:
 
             # Set footer
             embed.set_footer(
-                text="Kemono.party",
+                text="Kemono",
                 proxy_icon_url="https://i.imgur.com/CKPoBpM.png",
                 icon_url="https://i.imgur.com/CKPoBpM.png",
             )
