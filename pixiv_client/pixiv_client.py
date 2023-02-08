@@ -37,8 +37,8 @@ class PixivClient:
         if post_metadata["illustType"] != 0:
             return None
 
-        # Check if post is nsfw
-        if post_metadata["xRestrict"] != 1:
+        # Check if post is non-nsfw
+        if post_metadata["xRestrict"] == 0:
             return None  # ignore non-nsfw posts
 
         # Set post url
