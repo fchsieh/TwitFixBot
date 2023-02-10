@@ -93,7 +93,7 @@ class DiscordWebhook:
                 video_url = embed.video.get("url")
                 if video_url:
                     webhook.set_content(
-                        "__{}{}__".format(DISCORD_HIDE_PREFIX, video_url)
+                        "__{} {} __".format(DISCORD_HIDE_PREFIX, video_url)
                     )
                     sent_webhook = webhook.execute()
                     if sent_webhook.status_code not in {200, 204}:
@@ -104,3 +104,5 @@ class DiscordWebhook:
                         self.log.info(
                             f"Successfully sent video link to '{channel.name}'"
                         )
+                else:
+                    self.log.error("Failed to get video url from embed")
