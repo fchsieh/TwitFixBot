@@ -11,6 +11,9 @@ class TwitterClient:
     def build(self, url) -> dict:
         j = GalleryDL(url)
         j.run()
+        if len(j.data) == 0:
+            self.log.warning("No data found, falling back to send tweet url")
+            return {"tweet_url": url, "is_fallback": True}
 
         tweet_metadata = j.data[0][1]
 

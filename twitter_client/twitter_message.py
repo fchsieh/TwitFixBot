@@ -15,21 +15,6 @@ class TwitterMessage:
         self.embeds = None
 
     def twitter_base_embed(self, is_base=False) -> DiscordEmbed:
-        if not all(
-            [
-                self.content_dict["tweet_url"],
-                self.content_dict["user_nick"],
-                self.content_dict["user_name"],
-                self.content_dict["user_url"],
-                self.content_dict["user_image"],
-                self.content_dict["likes"] or self.content_dict["likes"] == 0,
-                self.content_dict["retweets"] or self.content_dict["retweets"] == 0,
-                self.content_dict["date"],
-            ]
-        ):
-            self.log.warning("Not all required fields are present")
-            return None
-
         embed = DiscordEmbed(url=self.content_dict["tweet_url"])
         if is_base:
             embed.set_color(0x1DA1F2)
@@ -65,6 +50,10 @@ class TwitterMessage:
             embed.set_timestamp(shifted_date.timestamp())
 
         return embed
+
+    def build_url_message(self) -> List[DiscordEmbed]:
+        embed = DiscordEmbed(url=self.content_dict["tweet_url"])
+        return []
 
     def build_text_message(self) -> List[DiscordEmbed]:
         embed_list = []
@@ -102,6 +91,25 @@ class TwitterMessage:
         return embed_list
 
     def build_message(self) -> bool:
+        if not self.content_dict["is_fallback"] and not all(
+            [
+                self.content_dict["tweet_url"],
+                self.content_dict["user_nick"],
+                self.content_dict["user_name"],
+                self.content_dict["user_url"],
+                self.content_dict["user_image"],
+                self.content_dict["likes"] or self.content_dict["likes"] == 0,
+                self.content_dict["retweets"] or self.content_dict["retweets"] == 0,
+                self.content_dict["date"],
+            ]
+        ):
+            self.log.warning("Not all required fields are present")
+            return None
+        # Check if is a fallback message
+        elif self.content_dict["is_fallback"]:
+            self.embeds = self.build_url_message()
+            return True
+
         if self.content_dict["is_video"]:
             self.embeds = self.build_video_message()
         elif self.content_dict["is_image"]:
