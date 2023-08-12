@@ -41,7 +41,7 @@ class TwitterMessage:
             embed.set_footer(
                 text="Twitter",
                 proxy_icon_url="https://images-ext-1.discordapp.net/external/bXJWV2Y_F3XSra_kEqIYXAAsI3m1meckfLhYuWzxIfI/https/abs.twimg.com/icons/apple-touch-icon-192x192.png",
-                icon_url="https://abs.twimg.com/icons/apple-touch-icon-192x192.png",
+                icon_url="https://abs.twimg.com/responsive-web/client-web/icon-ios.77d25eba.png",
             )
             # Set timestamp
             shifted_date = self.content_dict["date"] + timedelta(
