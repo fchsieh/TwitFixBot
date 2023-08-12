@@ -27,7 +27,7 @@ class TwitterMessage:
                 icon_url=self.content_dict["user_image"],
             )
             # Set content
-            embed.set_description(self.content_dict["content"] or "")
+            embed.set_description(r"{}".format(self.content_dict["content"]) or "")
             # Set media info
             if self.content_dict["likes"] > 0:
                 embed.add_embed_field(
