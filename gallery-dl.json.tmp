@@ -7,7 +7,7 @@
             "unique": false,
             "videos": true,
             "cards": "ytdl",
-            "size": ["medium", "large", "orig", "4096x4096", "small"],
+            "size": ["large", "orig", "4096x4096", "medium", "small"],
             "text-tweets": true,
             "retweets": "original",
             "syndication": "extended",
