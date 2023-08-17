@@ -17,7 +17,14 @@ class TwitterClient:
 
         tweet_information = j.data[0][1]
 
-        file_count = tweet_information["count"]
+        try:
+            file_count = tweet_information["count"]
+        except TypeError:
+            self.log.warning(
+                "No data found, falling back to send tweet url (comment section limited by author)"
+            )
+            return {"tweet_url": url, "is_fallback": True}
+
         tweet_data = defaultdict(lambda: None)
 
         # Set tweet url
@@ -45,8 +52,8 @@ class TwitterClient:
 
         tweet_data["media"] = []
         for f in j.data[1:]:
-            if(len(tweet_data["media"]) == file_count):
-                break # break if we have all the files
+            if len(tweet_data["media"]) == file_count:
+                break  # break if we have all the files
             tweet_data["media"].append(f[1])
             if "video" in f[1]:
                 tweet_data["is_video"] = True
