@@ -13,7 +13,7 @@ def is_exhentai_url(url):
 
 def is_kemono_url(url):
     # make sure it's a post
-    return all(["kemono.party" in url, "/post/" in url])
+    return all([("kemono.su" in url or "kemono.party" in url), "/post/" in url])
 
 
 def is_pixiv_url(url):
